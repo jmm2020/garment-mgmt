@@ -1,0 +1,14 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "./dist",
+    "noEmit": true,
+    "types": ["node"],
+    "paths": {
+      "@garment-mgmt/db": ["../db/src/index.ts"],
+      "@garment-mgmt/db/*": ["../db/src/*"]
+    }
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "exclude": ["node_modules", "dist"]
+}
