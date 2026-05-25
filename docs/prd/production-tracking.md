@@ -9,7 +9,7 @@
 
 ## TL;DR
 
-Pull *"sew / QC / finish / pack workflow"* from iteration 3 forward into iteration 2. Add a **production batch** entity that flows through five floor stations (received → staged → producing → QC → completed), generate a **structured FG SKU** at variant creation, and **push completed batches to Shopify** as the new finished-goods source of truth.
+Pull *"sew / QC / finish / pack workflow"* from iteration 3 forward into iteration 2. Add a **production batch** entity that flows through five floor stations (received → staged → producing → QC → completed), generate a **structured FG SKU** at variant creation, and **push completed batches to Shopify** as the new finished-goods source of truth. Gate production behind a **Production Validation Testing (PVT)** step that the company runs on a small pre-production cut before authorizing the full run.
 
 This iteration **does not** ship a UI. The CLI + REST API drive the floor workflow; UI lands in iteration 3.
 
@@ -57,6 +57,77 @@ This PRD fills that gap.
 > *Three months later, a customer DMs Maria: "the hood seam on the one I bought is unraveling." She queries: `gm batch find --sku PERF-HOOD-BLK-M-MENS-SS26-12OZ-COTTON --since 2026-04-01`. PB-2026-0042 comes up. She sees the QC note from Devon's lead. She pulls up the fabric lot via `gm lot provenance` from the cut ticket. The mill cert chain is two clicks away.*
 
 ---
+
+## Production Validation Testing (PVT)
+
+Before any full production run, the company validates the pattern + fabric combination on a small pre-production sample. This protects against:
+
+- **New garments** — a pattern that has never been cut at production scale. First cut surfaces fit issues, marker yield problems, sew-time surprises.
+- **Stale garments** — a pattern that has not been cut for an extended period (default: **6 months**, configurable per product). Patterns drift (fabric supplier swaps, pattern recuts, machine recalibration); a PVT confirms the current setup still produces.
+
+### How it works
+
+1. **Trigger.** When the operator attempts `gm batch receive` for a `(product_variant_id, pattern/marker)` pair that has no `validated` PVT *or* whose most recent validated PVT is older than `pvt_validity_months`, the system rejects with `pvt_required` and tells them which PVT to run.
+2. **Cutter cuts a small run** using the production pattern (the same `marker_id` the real batch will use). This produces a small lot — recorded as a normal `cut_ticket` with a `kind='pvt'` discriminator (see §3 below) so it's distinguishable from production cuts.
+3. **Cut sample is shipped to the company** for inspection. The operator runs `gm pvt mark-shipped <run-no>` when it leaves the floor.
+4. **Company inspects** — a validator on staff at the company reviews the sample. They run `gm pvt validate <run-no>` (pass) or `gm pvt reject <run-no> --reason "..."` (fail). Both record the validator's user ID and timestamp.
+5. **On validate** — the PVT row sets `status='validated'`, `validated_at=now()`, `validator_user_id`. The `expires_at` is computed as `validated_at + interval pvt_validity_months`. Production batches against this variant + pattern are now authorized until `expires_at`.
+6. **On reject** — the PVT row sets `status='rejected'` with `rejected_reason`. Production stays blocked. The operator must cut another PVT.
+
+### Status flow (PVT)
+
+```
+            ┌────────────┐
+            │   cutting  │  (cut_ticket exists, sample being made)
+            └──────┬─────┘
+                   ▼
+            ┌────────────┐
+            │  shipped   │  (cut leaving the floor, en route to company)
+            └──────┬─────┘
+                   ▼
+            ┌────────────┐
+            │ inspecting │  (company received, under review)
+            └──────┬─────┘
+                   ├──────────► rejected   (terminal — must cut a new PVT)
+                   ▼
+            ┌────────────┐
+            │ validated  │  (terminal — production authorized until expires_at)
+            └────────────┘
+```
+
+### What we track per PVT run
+
+| Field                | Notes                                                                              |
+| -------------------- | ---------------------------------------------------------------------------------- |
+| `run_no`             | `PVT-YYYY-####` — operator-facing, scannable, printed on the sample tag             |
+| `product_variant_id` | What's being validated                                                             |
+| `marker_id`          | Which pattern/marker — pattern changes invalidate prior PVTs for the same variant  |
+| `cut_ticket_id`      | The small cut ticket created for the sample (kind='pvt')                           |
+| `status`             | `cutting` → `shipped` → `inspecting` → `validated` | `rejected`                      |
+| `cutter_user_id`     | Who cut the sample                                                                 |
+| `validator_user_id`  | Who at the company inspected/validated (null until inspection)                     |
+| `cut_at`             | timestamp · when the sample was cut                                                |
+| `shipped_at`         | timestamp · when it left the floor                                                 |
+| `received_at`        | timestamp · when the company logged it as received for inspection                  |
+| `validated_at`       | timestamp · set on `validated`                                                     |
+| `rejected_at`        | timestamp · set on `rejected`                                                      |
+| `rejected_reason`    | text · required on `rejected`                                                      |
+| `expires_at`         | timestamp · computed from `validated_at + pvt_validity_months`                     |
+| `notes`              | text · validator notes (sew-time surprises, marker yield, fit feedback)            |
+
+A passed PVT is the **permanent forensic record** of the pre-production check that authorized every production batch downstream. Like completed batches, PVTs are append-only after a terminal state.
+
+### Validity window
+
+- Default `pvt_validity_months = 6`, configurable via `products.pvt_validity_months` (nullable; falls back to env `PVT_DEFAULT_VALIDITY_MONTHS=6`).
+- Some product lines (e.g., evergreens cut every few weeks) might warrant a 12-month window; volatile lines (technical performance with frequent fabric swaps) might warrant 3 months. The per-product override exists for that.
+- The "stale" check is `now() > most_recent_validated_pvt.expires_at`. No grace window — once expired, the next batch attempt is blocked until a new PVT validates.
+
+### What PVT does NOT block
+
+- Cancelling an already-validated production batch (no re-validation required)
+- Closing/reopening cut tickets unrelated to production batches
+- Cancelling an in-flight PVT (`pvt cancel`)
 
 ## Scope
 
@@ -110,7 +181,38 @@ This PRD fills that gap.
     - Cancel from each non-terminal state
     - Forensic query: `find --sku --since` returns expected batches
 13. **README updates**: add `gm batch` reference, env vars table, iteration-2 status to roadmap.
-14. **Audit coverage**: every state transition writes a `recordAudit` row.
+14. **Audit coverage**: every state transition writes a `recordAudit` row (batch *and* PVT transitions).
+15. **`production_validation_runs` entity** — full PVT model per §"Production Validation Testing" above. Includes `run_no` generator (PVT-YYYY-####), status enum, per-stage timestamps, validator + cutter user FKs, expiry.
+16. **PVT named transitions**:
+    - `createPvtRun(variantId, markerId, cutterUserId, cutTicketId)` — `null` → `cutting`
+    - `markPvtShipped(runId, actorUserId)` — `cutting` → `shipped`
+    - `markPvtReceived(runId, actorUserId)` — `shipped` → `inspecting`
+    - `validatePvt(runId, validatorUserId, notes?)` — `inspecting` → `validated`; computes `expires_at`
+    - `rejectPvt(runId, validatorUserId, reason)` — `inspecting` → `rejected`
+    - `cancelPvtRun(runId, actorUserId, reason)` — any non-terminal → `cancelled`
+17. **PVT gate on batch creation**: `receiveFromCutter` calls `assertPvtCurrent(variantId, markerId)` first; on failure throws `BusinessRuleError("pvt_required", { mostRecentRunNo, expiresAt })`. Bypass via `--force` flag emits an audit row but does not satisfy the gate (forces operator to consciously override).
+18. **PVT routes** at `/pvt`:
+    - `POST /pvt` — create (body: `{ productVariantId, markerId, cutterUserId, cutTicketId }`)
+    - `GET /pvt` — list with filters (`?status=`, `?variantId=`, `?activeOnly=true`)
+    - `GET /pvt/:runNo` — single PVT with events
+    - `POST /pvt/:runNo/ship`
+    - `POST /pvt/:runNo/receive`
+    - `POST /pvt/:runNo/validate` (body: `{ notes? }`)
+    - `POST /pvt/:runNo/reject` (body: `{ reason }`)
+    - `POST /pvt/:runNo/cancel` (body: `{ reason }`)
+    - `GET /products/:id/pvt-status` — convenience: is this product authorized for production right now? Returns `{ authorized: bool, mostRecentRun, expiresAt, reason? }`.
+19. **PVT CLI** at `gm pvt …`:
+    - `gm pvt create` — stdin: `{ productVariantId, markerId, cutterUserId, cutTicketId }`
+    - `gm pvt list [--status …] [--variant …] [--active-only]`
+    - `gm pvt show <runNo>`
+    - `gm pvt ship <runNo>`
+    - `gm pvt receive <runNo>`
+    - `gm pvt validate <runNo> [--note …]`
+    - `gm pvt reject <runNo> --reason <r>`
+    - `gm pvt cancel <runNo> --reason <r>`
+    - `gm pvt status --product <id>` — surfaces the gate status before the operator tries to start a batch
+20. **`products.pvt_validity_months` column** (nullable, falls back to env default `PVT_DEFAULT_VALIDITY_MONTHS=6`).
+21. **`cut_tickets.kind` column** (`'production' | 'pvt'`, default `'production'`) so PVT cuts are distinguishable in cut-ticket listings.
 
 ### Out of scope (this PR)
 
