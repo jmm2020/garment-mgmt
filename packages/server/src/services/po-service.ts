@@ -1,5 +1,5 @@
 import { schema, type Database, type DbExecutor } from "@garment-mgmt/db";
-import { eq, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { BusinessRuleError, NotFoundError } from "../errors.js";
 import { recordAudit } from "./audit-service.js";
 
@@ -170,7 +170,12 @@ export async function recalculatePoStatus(db: DbExecutor, poId: number): Promise
       received: sql<string>`COALESCE(SUM(${schema.materialLots.quantityReceived}), 0)`,
     })
     .from(schema.materialLots)
-    .where(sql`${schema.materialLots.poLineId} IN ${lines.map((l) => l.id)}`)
+    .where(
+      inArray(
+        schema.materialLots.poLineId,
+        lines.map((l) => l.id),
+      ),
+    )
     .groupBy(schema.materialLots.poLineId);
 
   const receivedByLine = new Map<number, number>();

@@ -104,6 +104,17 @@ export async function createCutTicket(
           .returning();
         if (!allocation) throw new Error("cut_ticket_lot insert returned no row");
         allocations.push(allocation);
+
+        // Decrement quantity_remaining inside the FOR UPDATE window so concurrent
+        // allocators see the reservation. CHECK constraint material_lots_qty_remaining_nonneg
+        // is the final guard against double-spend.
+        await tx
+          .update(schema.materialLots)
+          .set({
+            quantityRemaining: sql`${schema.materialLots.quantityRemaining} - ${pick.quantity.toFixed(3)}::numeric`,
+            updatedAt: new Date(),
+          })
+          .where(eq(schema.materialLots.id, pick.lotId));
       }
     }
 
@@ -127,19 +138,19 @@ export async function createCutTicket(
   });
 }
 
-interface Candidate {
+export interface Candidate {
   id: number;
   dyeLot: string | null;
   remaining: number;
   receivedAt: Date;
 }
 
-interface Pick {
+export interface Pick {
   lotId: number;
   quantity: number;
 }
 
-function pickFifo(candidates: Candidate[], need: number, materialVariantId: number): Pick[] {
+export function pickFifo(candidates: Candidate[], need: number, materialVariantId: number): Pick[] {
   const picks: Pick[] = [];
   let remaining = need;
   for (const c of candidates) {
@@ -157,7 +168,7 @@ function pickFifo(candidates: Candidate[], need: number, materialVariantId: numb
   return picks;
 }
 
-function pickSingleDyeLot(
+export function pickSingleDyeLot(
   candidates: Candidate[],
   need: number,
   materialVariantId: number,
@@ -266,10 +277,15 @@ export async function closeCutTicket(db: Database, input: CloseCutTicketInput): 
         .where(eq(schema.materialLots.id, ctLot.materialLotId));
       if (!lot) throw new NotFoundError("material_lot", ctLot.materialLotId);
 
-      if (cut > Number(lot.quantityRemaining)) {
+      const planned = Number(ctLot.plannedQuantity);
+      // Lot already had `planned` debited at allocation. Reconcile by adding
+      // (planned - cut): positive credits unused allocation back, negative is an
+      // overrun. Overruns can only proceed if the lot still has stock.
+      const adjustment = planned - cut;
+      if (adjustment < 0 && -adjustment > Number(lot.quantityRemaining)) {
         throw new BusinessRuleError(
           "consumption_exceeds_lot",
-          `Cannot consume ${cut} from lot ${lot.id} (remaining ${lot.quantityRemaining})`,
+          `Cut ${cut} exceeds planned ${planned} plus remaining ${lot.quantityRemaining} for lot ${lot.id}`,
         );
       }
 
@@ -281,10 +297,12 @@ export async function closeCutTicket(db: Database, input: CloseCutTicketInput): 
         })
         .where(eq(schema.cutTicketLots.id, actual.cutTicketLotId));
 
-      const newRemaining = Number(lot.quantityRemaining) - cut;
       await tx
         .update(schema.materialLots)
-        .set({ quantityRemaining: newRemaining.toFixed(3), updatedAt: new Date() })
+        .set({
+          quantityRemaining: sql`${schema.materialLots.quantityRemaining} + ${adjustment.toFixed(3)}::numeric`,
+          updatedAt: new Date(),
+        })
         .where(eq(schema.materialLots.id, lot.id));
 
       if (cut > 0) {
@@ -299,6 +317,11 @@ export async function closeCutTicket(db: Database, input: CloseCutTicketInput): 
       }
 
       if (returned > 0) {
+        // `cut` already includes the returned quantity (the cutter removed `cut`
+        // yards from the parent roll; `returned` is the reusable scrap split out
+        // into the remnants table). Per ADR-0003, remnants are tracked as their
+        // own inventory items and not re-added to the parent lot, so no parent-
+        // lot movement is written here.
         const [remnant] = await tx
           .insert(schema.remnants)
           .values({
@@ -307,20 +330,12 @@ export async function closeCutTicket(db: Database, input: CloseCutTicketInput): 
             quantity: returned.toFixed(3),
           })
           .returning();
-
-        await tx.insert(schema.lotMovements).values({
-          lotId: lot.id,
-          movementType: "remnant_return",
-          quantity: returned.toFixed(3),
-          referenceType: "remnant",
-          referenceId: remnant?.id,
-          actorUserId: input.actorUserId,
-        });
+        if (!remnant) throw new Error("remnant insert returned no row");
 
         await recordAudit({
           db: tx,
           entityType: "remnant",
-          entityId: remnant!.id,
+          entityId: remnant.id,
           action: "create",
           actorUserId: input.actorUserId,
           after: remnant,
@@ -362,6 +377,25 @@ export async function cancelCutTicket(
         `Cannot cancel cut ticket in status=${before.status}`,
       );
     }
+
+    // Credit allocated quantities back to material lots. Drafts have no
+    // allocations yet, so this only matters for allocated tickets.
+    if (before.status === "allocated") {
+      const ctLots = await tx
+        .select()
+        .from(schema.cutTicketLots)
+        .where(eq(schema.cutTicketLots.cutTicketId, ticketId));
+      for (const ctLot of ctLots) {
+        await tx
+          .update(schema.materialLots)
+          .set({
+            quantityRemaining: sql`${schema.materialLots.quantityRemaining} + ${ctLot.plannedQuantity}::numeric`,
+            updatedAt: new Date(),
+          })
+          .where(eq(schema.materialLots.id, ctLot.materialLotId));
+      }
+    }
+
     const [after] = await tx
       .update(schema.cutTickets)
       .set({ status: "cancelled", updatedAt: new Date(), notes: reason })

@@ -10,6 +10,11 @@ export interface SessionUser {
   role: schema.UserRole;
 }
 
+// Real bcrypt hash of an unguessable string. Used when no user matches so
+// bcrypt.compare runs its full cost-10 KDF on every authenticate call,
+// keeping the user-miss path on the same timing budget as a wrong-password hit.
+const DUMMY_PASSWORD_HASH = bcrypt.hashSync("__no_user_dummy_password__", 10);
+
 export async function authenticate(
   db: Database,
   email: string,
@@ -17,9 +22,7 @@ export async function authenticate(
 ): Promise<SessionUser> {
   const [user] = await db.select().from(schema.users).where(eq(schema.users.email, email)).limit(1);
 
-  // Constant-time guard: still hash a dummy on miss so timing leaks user existence less.
-  const hash =
-    user?.passwordHash ?? "$2a$10$invalidinvalidinvalidinvalidinvalidinvalidinvalidinvalid";
+  const hash = user?.passwordHash ?? DUMMY_PASSWORD_HASH;
   const ok = await bcrypt.compare(password, hash);
   if (!user || user.status !== "active" || !ok) {
     throw new AuthError("invalid_credentials", "Invalid email or password");

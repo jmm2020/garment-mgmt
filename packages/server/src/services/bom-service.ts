@@ -273,16 +273,10 @@ export interface CutTicketComponentRequirement {
   bomComponentId: number;
 }
 
-export async function componentsForCutTicket(
-  db: DbExecutor,
-  bomId: number,
+export function computeRequirementsFromComponents(
+  components: BomComponent[],
   sizeBreakdown: Record<string, number>,
-): Promise<CutTicketComponentRequirement[]> {
-  const components = await db
-    .select()
-    .from(schema.bomComponents)
-    .where(eq(schema.bomComponents.bomId, bomId));
-
+): CutTicketComponentRequirement[] {
   return components.map((c) => {
     const curve = (c.sizeCurve as Record<string, number> | null) ?? {};
     const baseQty = Number(c.quantityPerUnit);
@@ -300,4 +294,16 @@ export async function componentsForCutTicket(
       bomComponentId: c.id,
     };
   });
+}
+
+export async function componentsForCutTicket(
+  db: DbExecutor,
+  bomId: number,
+  sizeBreakdown: Record<string, number>,
+): Promise<CutTicketComponentRequirement[]> {
+  const components = await db
+    .select()
+    .from(schema.bomComponents)
+    .where(eq(schema.bomComponents.bomId, bomId));
+  return computeRequirementsFromComponents(components, sizeBreakdown);
 }
