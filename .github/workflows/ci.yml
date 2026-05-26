@@ -60,5 +60,10 @@ jobs:
       - name: Migrate (dev DB)
         run: pnpm migrate
 
+      - name: Migrate (test DB)
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+        run: pnpm --filter @garment-mgmt/db migrate
+
       - name: Test
         run: pnpm test

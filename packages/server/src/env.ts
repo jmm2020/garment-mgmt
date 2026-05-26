@@ -6,6 +6,14 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   SESSION_SECRET: z.string().min(16, "SESSION_SECRET must be at least 16 characters"),
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+  // Shopify Admin API push (background job). In test mode the client logs instead of
+  // calling — CI never hits the network.
+  SHOPIFY_SHOP_DOMAIN: z.string().optional(),
+  SHOPIFY_ADMIN_TOKEN: z.string().optional(),
+  SHOPIFY_LOCATION_ID: z.string().optional(),
+  SHOPIFY_PUSH_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),
+  // Per-product override lives on products.pvt_validity_months; this is the fallback.
+  PVT_DEFAULT_VALIDITY_MONTHS: z.coerce.number().int().positive().default(6),
 });
 
 export type Env = z.infer<typeof envSchema>;
