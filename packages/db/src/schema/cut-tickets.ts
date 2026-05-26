@@ -27,6 +27,11 @@ export const CUT_TICKET_STATUSES = [
 
 export const cutTicketStatusEnum = pgEnum("cut_ticket_status", CUT_TICKET_STATUSES);
 
+// Discriminator so PVT-sample cuts don't pollute production cut-ticket listings
+// and so production-batch creation can refuse to consume a 'pvt' cut by mistake.
+export const CUT_TICKET_KINDS = ["production", "pvt"] as const;
+export const cutTicketKindEnum = pgEnum("cut_ticket_kind", CUT_TICKET_KINDS);
+
 export const cutTickets = pgTable(
   "cut_tickets",
   {
@@ -39,6 +44,7 @@ export const cutTickets = pgTable(
       .notNull()
       .references(() => boms.id),
     markerId: bigint("marker_id", { mode: "number" }).references(() => markers.id),
+    kind: cutTicketKindEnum("kind").notNull().default("production"),
     status: cutTicketStatusEnum("status").notNull().default("draft"),
     plannedQuantityBySize: jsonb("planned_quantity_by_size").notNull(),
     targetCompletionAt: date("target_completion_at"),
@@ -86,3 +92,4 @@ export type NewCutTicket = typeof cutTickets.$inferInsert;
 export type CutTicketLot = typeof cutTicketLots.$inferSelect;
 export type NewCutTicketLot = typeof cutTicketLots.$inferInsert;
 export type CutTicketStatus = (typeof CUT_TICKET_STATUSES)[number];
+export type CutTicketKind = (typeof CUT_TICKET_KINDS)[number];
