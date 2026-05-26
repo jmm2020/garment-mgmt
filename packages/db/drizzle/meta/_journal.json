@@ -8,6 +8,20 @@
       "when": 1779723941322,
       "tag": "0000_initial",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779807837345,
+      "tag": "0001_early_gladiator",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1779807900000,
+      "tag": "0002_backfill_variant_sku",
+      "breakpoints": true
     }
   ]
 }
