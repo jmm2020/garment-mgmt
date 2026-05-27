@@ -15,6 +15,8 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 gm() {
   (cd "$REPO_ROOT" && pnpm --silent --filter @garment-mgmt/cli start -- "$@")
 }
+# post/get/JAR are used only in step 2 to verify the HTTP API is reachable;
+# the main flow drives the server through the gm CLI session.
 post() {
   local path=$1 body=$2
   curl -sS -c "$JAR" -b "$JAR" -H "content-type: application/json" -d "$body" "$HOST$path"
@@ -44,13 +46,15 @@ echo "  user=$USER_ID var=$VAR_ID marker=$MK_ID prod_ct=$PROD_CT_ID pvt_ct=$PVT_
 echo "[e2e-batches] 2/8 login"
 GM_PASSWORD="$ADMIN_PASSWORD" gm login "$ADMIN_EMAIL" --host "$HOST"
 post "/auth/login" "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" > /dev/null
-get "/auth/me" | jq -e '.email' > /dev/null
+ME=$(get "/auth/me" | jq -e -r '.email')
+echo "  http-session: $ME"
 echo "  logged in as $ADMIN_EMAIL"
 
 echo "[e2e-batches] 3/8 pvt create"
 PVT_JSON=$(gm pvt create --variant "$VAR_ID" --marker "$MK_ID" \
   --cutter "$USER_ID" --cut-ticket "$PVT_CT_ID")
 RUN_NO=$(echo "$PVT_JSON" | jq -r '.runNo')
+[[ "$RUN_NO" != "null" && -n "$RUN_NO" ]] || { echo "FAIL: pvt create returned no runNo" >&2; exit 1; }
 echo "  run_no=$RUN_NO"
 
 echo "[e2e-batches] 4/8 pvt ship → receive → validate"
@@ -69,6 +73,7 @@ BATCH_JSON=$(gm batch receive \
   --qty        "10"          \
   --cutter     "$USER_ID")
 BATCH_NO=$(echo "$BATCH_JSON" | jq -r '.batchNo')
+[[ "$BATCH_NO" != "null" && -n "$BATCH_NO" ]] || { echo "FAIL: batch receive returned no batchNo" >&2; exit 1; }
 echo "  batch_no=$BATCH_NO"
 
 echo "[e2e-batches] 6/8 batch stage → start → submit-qc → complete"
