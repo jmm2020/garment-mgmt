@@ -22,15 +22,15 @@ The codebase is **iteration 1** of a 4-iteration plan. Schema reserves seams (`b
 
 ## Stack
 
-| Layer       | Choice                                                                    |
-| ----------- | ------------------------------------------------------------------------- |
-| Runtime     | Node ≥ 20 · pnpm 9.15.9 · TypeScript 5.6 · ESM                            |
-| Database    | PostgreSQL 16 · Drizzle ORM 0.36 · drizzle-kit 0.28 · `postgres` driver   |
-| HTTP        | Fastify 5 · Zod 3.23 for validation                                       |
-| Auth        | Bcryptjs session tokens, cookie-based                                     |
-| CLI         | Commander 12 (`gm` entry, session at `~/.garment-mgmt/session`)           |
-| Tests       | Vitest 2 · `withTestDb()` rollback harness · per-service unit tests       |
-| CI          | GitHub Actions · Postgres-as-a-service · matrix Node 20                   |
+| Layer    | Choice                                                                  |
+| -------- | ----------------------------------------------------------------------- |
+| Runtime  | Node ≥ 20 · pnpm 9.15.9 · TypeScript 5.6 · ESM                          |
+| Database | PostgreSQL 16 · Drizzle ORM 0.36 · drizzle-kit 0.28 · `postgres` driver |
+| HTTP     | Fastify 5 · Zod 3.23 for validation                                     |
+| Auth     | Bcryptjs session tokens, cookie-based                                   |
+| CLI      | Commander 12 (`gm` entry, session at `~/.garment-mgmt/session`)         |
+| Tests    | Vitest 2 · `withTestDb()` rollback harness · per-service unit tests     |
+| CI       | GitHub Actions · Postgres-as-a-service · matrix Node 20                 |
 
 Three workspaces: `packages/db`, `packages/server`, `packages/cli`.
 
@@ -52,12 +52,12 @@ If any of these fail, you are **not** done. Fix or report — do not claim succe
 
 Use the `DomainError` hierarchy in `packages/server/src/errors.ts`:
 
-| Subclass           | Use when                                          | HTTP |
-| ------------------ | ------------------------------------------------- | ---- |
-| `NotFoundError`    | Entity by id doesn't exist                        | 404  |
-| `ValidationError`  | Zod parse fail, missing required field            | 400  |
-| `BusinessRuleError`| Domain invariant violated (e.g., dye-lot split)   | 409  |
-| `AuthError`        | No session / wrong role                           | 401/403 |
+| Subclass            | Use when                                        | HTTP    |
+| ------------------- | ----------------------------------------------- | ------- |
+| `NotFoundError`     | Entity by id doesn't exist                      | 404     |
+| `ValidationError`   | Zod parse fail, missing required field          | 400     |
+| `BusinessRuleError` | Domain invariant violated (e.g., dye-lot split) | 409     |
+| `AuthError`         | No session / wrong role                         | 401/403 |
 
 The central `setErrorHandler` in `app.ts` maps these. If you `throw new Error(...)`, it becomes a generic 500 with no `code` field, and clients can't branch on it.
 
@@ -114,6 +114,7 @@ Audit rows are scrubbed (`passwordHash`, `session_token`, etc.) recursively befo
 ### 7. State transitions are named functions.
 
 `activateBom`, `sendPo`, `confirmPo`, `markInCutting`, `closeCutTicket`, `cancelCutTicket`. **Don't add a generic `updateCutTicket`.** If you need a new transition (e.g., iter 2's `receiveFromCutter`), add a named function that:
+
 1. Validates current state
 2. Updates the status (and any other fields)
 3. Inserts an audit row
@@ -208,9 +209,9 @@ packages/server/src/
 
 ## Iteration roadmap
 
-| Iter | Theme                                             | Status        |
-| ---- | ------------------------------------------------- | ------------- |
-| 1    | Data layer, REST API, CLI, lot/cut foundation     | PR #1 (this)  |
-| 2    | Production batches, station tracking, Shopify FG  | PR #2 (next)  |
-| 3    | React UI, real-time, sew/QC/finish/pack           | future        |
-| 4+   | CSV export, multi-facility, mobile, SAM costing   | future        |
+| Iter | Theme                                            | Status       |
+| ---- | ------------------------------------------------ | ------------ |
+| 1    | Data layer, REST API, CLI, lot/cut foundation    | PR #1 (this) |
+| 2    | Production batches, station tracking, Shopify FG | PR #2 (next) |
+| 3    | React UI, real-time, sew/QC/finish/pack          | future       |
+| 4+   | CSV export, multi-facility, mobile, SAM costing  | future       |

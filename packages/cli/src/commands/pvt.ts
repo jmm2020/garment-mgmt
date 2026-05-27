@@ -52,7 +52,10 @@ export function registerPvtCommand(program: Command): void {
   pvt
     .command("list")
     .description("List PVT runs (GET /api/pvt)")
-    .option("--status <status>", "cutting | shipped | inspecting | validated | rejected | cancelled")
+    .option(
+      "--status <status>",
+      "cutting | shipped | inspecting | validated | rejected | cancelled",
+    )
     .option("--variant <id>", "filter by variant id")
     .option("--active-only", "only authorized/in-progress runs", false)
     .action(async (opts: ListOpts) => {

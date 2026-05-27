@@ -51,7 +51,8 @@ export async function inventoryAdjustQuantities(
       testMode: false,
       delta,
       sku,
-      error: "shopify env not configured (SHOPIFY_SHOP_DOMAIN, SHOPIFY_ADMIN_TOKEN, SHOPIFY_LOCATION_ID)",
+      error:
+        "shopify env not configured (SHOPIFY_SHOP_DOMAIN, SHOPIFY_ADMIN_TOKEN, SHOPIFY_LOCATION_ID)",
     };
   }
 

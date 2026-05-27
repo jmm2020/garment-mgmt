@@ -1,9 +1,6 @@
 import { schema, type Database } from "@garment-mgmt/db";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import {
-  markShopifyPushed,
-  recordShopifyFailure,
-} from "../services/production-batch-queries.js";
+import { markShopifyPushed, recordShopifyFailure } from "../services/production-batch-queries.js";
 import {
   inventoryAdjustQuantities,
   type ShopifyClientConfig,
