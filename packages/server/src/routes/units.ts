@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/middleware.js";
+import { ValidationFailedError } from "../errors.js";
 import {
   getUnit,
   listBatchUnits,
@@ -32,18 +33,23 @@ export async function registerBatchUnitRoutes(app: FastifyInstance): Promise<voi
 
   app.get("/:batchId/units", async (req) => {
     const { batchId } = req.params as { batchId: string };
+    const id = parseInt(batchId, 10);
+    if (!Number.isFinite(id)) throw new ValidationFailedError("batchId must be a number");
     const { verdict } = listQuery.parse(req.query ?? {});
-    return listBatchUnits(req.db, Number(batchId), verdict ? { verdict } : undefined);
+    return listBatchUnits(req.db, id, verdict ? { verdict } : undefined);
   });
 
   app.post(
     "/:batchId/units/:serial/qc",
     { preHandler: requireAuth(["admin", "production_staff"]) },
     async (req) => {
-      const { serial } = req.params as { batchId: string; serial: string };
+      const { batchId, serial } = req.params as { batchId: string; serial: string };
+      const id = parseInt(batchId, 10);
+      if (!Number.isFinite(id)) throw new ValidationFailedError("batchId must be a number");
       const body = qcBody.parse(req.body);
       return recordUnitQcVerdict(req.db, {
         unitSerial: serial,
+        batchId: id,
         verdict: body.verdict,
         reason: body.reason ?? null,
         actorUserId: req.currentUser?.id,

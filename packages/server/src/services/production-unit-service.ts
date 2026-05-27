@@ -11,6 +11,7 @@ const QC_VERDICTS = new Set<QcVerdict>(["pass", "fail", "pass_with_notes"]);
 
 export interface RecordUnitQcVerdictInput {
   unitSerial: string;
+  batchId: number;
   verdict: QcVerdict;
   reason?: string | null;
   actorUserId?: number;
@@ -40,8 +41,8 @@ export async function mintUnits(
   qty: number,
   actorUserId?: number,
 ): Promise<ProductionUnit[]> {
-  if (!Number.isFinite(qty) || qty < 0) {
-    throw new ValidationFailedError("qty must be >= 0");
+  if (!Number.isFinite(qty) || qty < 0 || !Number.isInteger(qty)) {
+    throw new ValidationFailedError("qty must be a non-negative integer");
   }
   if (qty === 0) return [];
 
@@ -66,7 +67,7 @@ export async function mintUnits(
 
   const inserted = await db.insert(schema.productionUnits).values(values).returning();
   if (inserted.length !== qty) {
-    throw new Error(`mintUnits: expected ${qty} rows, got ${inserted.length}`);
+    throw new ValidationFailedError(`mintUnits: expected ${qty} rows, got ${inserted.length}`);
   }
 
   const firstSerial = inserted[0]?.unitSerial ?? null;
@@ -106,6 +107,9 @@ export async function recordUnitQcVerdict(
       .from(schema.productionUnits)
       .where(eq(schema.productionUnits.unitSerial, input.unitSerial));
     if (!unit) throw new NotFoundError("production_unit", input.unitSerial);
+    if (unit.batchId !== input.batchId) {
+      throw new NotFoundError("production_unit", input.unitSerial);
+    }
     if (unit.status !== "created") {
       throw new BusinessRuleError(
         "unit_verdict_already_set",
@@ -127,7 +131,7 @@ export async function recordUnitQcVerdict(
       })
       .where(eq(schema.productionUnits.id, unit.id))
       .returning();
-    if (!after) throw new Error("production_unit update returned no row");
+    if (!after) throw new ValidationFailedError("production_unit update returned no row");
 
     await tx.insert(schema.productionEvents).values({
       batchId: unit.batchId,

@@ -1,5 +1,5 @@
 import { schema } from "@garment-mgmt/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { afterAll, describe, expect, it } from "vitest";
 import { NotFoundError } from "../src/errors.js";
 import {
@@ -87,6 +87,7 @@ describe("production units — QC verdicts", () => {
       for (const unit of units.slice(0, 8)) {
         await recordUnitQcVerdict(db, {
           unitSerial: unit.unitSerial,
+          batchId: batch.id,
           verdict: "pass",
           actorUserId: fx.userId,
         });
@@ -94,6 +95,7 @@ describe("production units — QC verdicts", () => {
       for (const unit of units.slice(8)) {
         await recordUnitQcVerdict(db, {
           unitSerial: unit.unitSerial,
+          batchId: batch.id,
           verdict: "fail",
           reason: "seam failure",
           actorUserId: fx.userId,
@@ -109,6 +111,22 @@ describe("production units — QC verdicts", () => {
       expect(passed.every((u) => u.status === "qc_passed")).toBe(true);
       expect(failed.every((u) => u.status === "qc_rejected")).toBe(true);
       expect(failed[0]?.qcRejectedReason).toBe("seam failure");
+
+      // L-2: verify unit_qc_verdict events are emitted with correct payload
+      const qcEvents = await db
+        .select()
+        .from(schema.productionEvents)
+        .where(
+          and(
+            eq(schema.productionEvents.batchId, batch.id),
+            eq(schema.productionEvents.eventType, "unit_qc_verdict"),
+          ),
+        );
+      expect(qcEvents).toHaveLength(10);
+      expect((qcEvents[0]?.payload as { verdict: string }).verdict).toBe("pass");
+      expect((qcEvents[8]?.payload as { verdict: string; reason: string }).reason).toBe(
+        "seam failure",
+      );
     });
   });
 
@@ -130,12 +148,14 @@ describe("production units — QC verdicts", () => {
 
       await recordUnitQcVerdict(db, {
         unitSerial: unit.unitSerial,
+        batchId: batch.id,
         verdict: "pass",
         actorUserId: fx.userId,
       });
       await expect(
         recordUnitQcVerdict(db, {
           unitSerial: unit.unitSerial,
+          batchId: batch.id,
           verdict: "fail",
           actorUserId: fx.userId,
         }),
@@ -148,6 +168,7 @@ describe("production units — QC verdicts", () => {
       await expect(
         recordUnitQcVerdict(db, {
           unitSerial: "U-9999-999999",
+          batchId: 0,
           verdict: "pass",
         }),
       ).rejects.toBeInstanceOf(NotFoundError);
@@ -171,6 +192,7 @@ describe("production units — QC verdicts", () => {
       for (const unit of units) {
         await recordUnitQcVerdict(db, {
           unitSerial: unit.unitSerial,
+          batchId: batch.id,
           verdict: "pass",
           actorUserId: fx.userId,
         });
@@ -183,6 +205,70 @@ describe("production units — QC verdicts", () => {
       expect(reloaded?.qcVerdict).toBeNull();
       expect(reloaded?.qtyActual).toBeNull();
       expect(reloaded?.status).toBe("in_production");
+    });
+  });
+
+  it("maps pass_with_notes verdict to qc_passed status", async () => {
+    await withTestDb(async (db) => {
+      const fx = await seedProductionFixture(db);
+      await seedValidatedPvt(db, fx);
+      const batch = await receiveFromCutter(db, {
+        cutTicketId: fx.productionCutTicketId,
+        productVariantId: fx.variantId,
+        qtyPlanned: "1",
+        cutterUserId: fx.userId,
+        actorUserId: fx.userId,
+      });
+      await stageForProduction(db, batch.id, fx.userId);
+      await startProduction(db, batch.id, fx.userId);
+      const [unit] = await listBatchUnits(db, batch.id);
+      if (!unit) throw new Error("expected one minted unit");
+
+      const after = await recordUnitQcVerdict(db, {
+        unitSerial: unit.unitSerial,
+        batchId: batch.id,
+        verdict: "pass_with_notes",
+        reason: "minor loose thread, acceptable",
+        actorUserId: fx.userId,
+      });
+      expect(after.status).toBe("qc_passed");
+      expect(after.qcVerdict).toBe("pass_with_notes");
+    });
+  });
+
+  it("rejects QC verdict for unit belonging to a different batch (cross-batch ownership)", async () => {
+    await withTestDb(async (db) => {
+      const fx = await seedProductionFixture(db);
+      await seedValidatedPvt(db, fx);
+
+      const batch1 = await receiveFromCutter(db, {
+        cutTicketId: fx.productionCutTicketId,
+        productVariantId: fx.variantId,
+        qtyPlanned: "1",
+        cutterUserId: fx.userId,
+        actorUserId: fx.userId,
+      });
+      await stageForProduction(db, batch1.id, fx.userId);
+      await startProduction(db, batch1.id, fx.userId);
+      const [unit] = await listBatchUnits(db, batch1.id);
+      if (!unit) throw new Error("expected one minted unit");
+
+      const batch2 = await receiveFromCutter(db, {
+        cutTicketId: fx.productionCutTicketId,
+        productVariantId: fx.variantId,
+        qtyPlanned: "1",
+        cutterUserId: fx.userId,
+        actorUserId: fx.userId,
+      });
+
+      await expect(
+        recordUnitQcVerdict(db, {
+          unitSerial: unit.unitSerial,
+          batchId: batch2.id,
+          verdict: "pass",
+          actorUserId: fx.userId,
+        }),
+      ).rejects.toBeInstanceOf(NotFoundError);
     });
   });
 });
