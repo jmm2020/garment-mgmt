@@ -176,15 +176,11 @@ export async function lookupShopifyVariantGid(
         },
         body: JSON.stringify({ query, variables }),
       });
-      let jsonParseOk1 = true;
-      const body = (await res.json().catch(() => {
-        jsonParseOk1 = false;
-        return {};
-      })) as {
+      const body = (await res.json().catch(() => null)) as {
         data?: { productVariants?: { nodes?: { id?: string }[] } };
         errors?: { message: string }[];
-      };
-      if (!jsonParseOk1) {
+      } | null;
+      if (body === null) {
         lastError = `HTTP ${res.status} (non-JSON response)`;
       } else if (res.ok && (!body.errors || body.errors.length === 0)) {
         const gid = body.data?.productVariants?.nodes?.[0]?.id;
@@ -282,11 +278,7 @@ export async function setVariantMetafield(
         },
         body: JSON.stringify({ query, variables }),
       });
-      let jsonParseOk2 = true;
-      const body = (await res.json().catch(() => {
-        jsonParseOk2 = false;
-        return {};
-      })) as {
+      const body = (await res.json().catch(() => null)) as {
         data?: {
           metafieldsSet?: {
             metafields?: { id?: string }[];
@@ -294,8 +286,8 @@ export async function setVariantMetafield(
           };
         };
         errors?: { message: string }[];
-      };
-      if (!jsonParseOk2) {
+      } | null;
+      if (body === null) {
         lastError = `HTTP ${res.status} (non-JSON response)`;
       } else if (res.ok && (!body.errors || body.errors.length === 0)) {
         const userErrors = body.data?.metafieldsSet?.userErrors ?? [];

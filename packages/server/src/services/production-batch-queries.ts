@@ -1,5 +1,5 @@
 import { schema, type Database, type DbExecutor } from "@garment-mgmt/db";
-import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray } from "drizzle-orm";
 import { NotFoundError, ValidationFailedError } from "../errors.js";
 
 type ProductionBatch = schema.ProductionBatch;
@@ -48,7 +48,7 @@ export async function listBatches(
       .where(eq(schema.productVariants.sku, filter.sku));
     if (variantIds.length === 0) return [];
     conditions.push(
-      sql`${schema.productionBatches.productVariantId} IN ${variantIds.map((v) => v.id)}`,
+      inArray(schema.productionBatches.productVariantId, variantIds.map((v) => v.id)),
     );
   }
   const where = conditions.length > 0 ? and(...conditions) : undefined;
