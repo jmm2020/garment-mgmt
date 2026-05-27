@@ -90,9 +90,7 @@ async function main(): Promise<void> {
         plannedQuantityBySize: { M: 10 },
       })
       .returning();
-    if (!prodCt) {
-      throw new Error("seed-e2e-batches: production cut ticket insert returned nothing");
-    }
+    if (!prodCt) throw new Error("seed-e2e-batches: production cut ticket insert returned nothing");
 
     const [pvtCt] = await tx
       .insert(schema.cutTickets)
