@@ -3,6 +3,7 @@ import { eq, sql } from "drizzle-orm";
 import { BusinessRuleError, NotFoundError, ValidationFailedError } from "../errors.js";
 import { recordAudit } from "./audit-service.js";
 import { loadBatch, type BatchRef } from "./production-batch-queries.js";
+import { mintUnits } from "./production-unit-service.js";
 import { assertPvtCurrent } from "./pvt-service.js";
 
 type ProductionBatch = schema.ProductionBatch;
@@ -125,11 +126,46 @@ export async function startProduction(
   ref: BatchRef,
   actorUserId?: number,
 ): Promise<ProductionBatch> {
-  return transition(db, ref, {
-    from: "staged_pre_prod",
-    to: "in_production",
-    timestampColumn: "startedAt",
-    actorUserId,
+  return db.transaction(async (tx) => {
+    const before = await loadBatch(tx, ref);
+    if (before.status !== "staged_pre_prod") {
+      throw new BusinessRuleError(
+        "invalid_transition",
+        `Cannot transition to in_production from ${before.status}`,
+      );
+    }
+    const [after] = await tx
+      .update(schema.productionBatches)
+      .set({
+        status: "in_production",
+        startedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.productionBatches.id, before.id))
+      .returning();
+    if (!after) throw new Error("production_batch update returned no row");
+
+    await writeEvent(tx, {
+      batchId: after.id,
+      eventType: "state_transition",
+      fromStatus: "staged_pre_prod",
+      toStatus: "in_production",
+      actorUserId,
+      payload: null,
+    });
+    await recordAudit({
+      db: tx,
+      entityType: "production_batch",
+      entityId: after.id,
+      action: "state_transition:staged_pre_prod->in_production",
+      actorUserId,
+      before,
+      after,
+    });
+
+    await mintUnits(tx, after.id, Number(after.qtyPlanned), actorUserId);
+
+    return after;
   });
 }
 
