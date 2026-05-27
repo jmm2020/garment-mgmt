@@ -2,13 +2,7 @@
 import { Command } from "commander";
 import { registerBatchCommand } from "./commands/batch.js";
 import { registerPvtCommand } from "./commands/pvt.js";
-import {
-  DEFAULT_HOST,
-  printJson,
-  readStdin,
-  request,
-  saveSession,
-} from "./lib/request.js";
+import { DEFAULT_HOST, printJson, readStdin, request, saveSession } from "./lib/request.js";
 
 const program = new Command();
 program.name("gm").description("Garment management CLI").version("0.1.0");

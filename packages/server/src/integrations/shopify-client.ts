@@ -51,7 +51,8 @@ export async function inventoryAdjustQuantities(
       testMode: false,
       delta,
       sku,
-      error: "shopify env not configured (SHOPIFY_SHOP_DOMAIN, SHOPIFY_ADMIN_TOKEN, SHOPIFY_LOCATION_ID)",
+      error:
+        "shopify env not configured (SHOPIFY_SHOP_DOMAIN, SHOPIFY_ADMIN_TOKEN, SHOPIFY_LOCATION_ID)",
     };
   }
 
@@ -105,7 +106,7 @@ export async function inventoryAdjustQuantities(
       lastError = err instanceof Error ? err.message : String(err);
     }
     if (attempt < MAX_ATTEMPTS) {
-      await sleep(Math.pow(2, attempt - 1) * 1000);
+      await sleep(2 ** (attempt - 1) * 1000);
     }
   }
   return { ok: false, attempts: MAX_ATTEMPTS, testMode: false, delta, sku, error: lastError };

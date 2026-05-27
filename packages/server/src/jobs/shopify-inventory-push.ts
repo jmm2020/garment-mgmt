@@ -1,9 +1,7 @@
+import { setTimeout as delay } from "node:timers/promises";
 import { schema, type Database } from "@garment-mgmt/db";
 import { and, eq, isNull, sql } from "drizzle-orm";
-import {
-  markShopifyPushed,
-  recordShopifyFailure,
-} from "../services/production-batch-queries.js";
+import { markShopifyPushed, recordShopifyFailure } from "../services/production-batch-queries.js";
 import {
   inventoryAdjustQuantities,
   type ShopifyClientConfig,
@@ -107,7 +105,7 @@ export function startInventoryPushLoop(
         // will retry; persistent failures show up in production_events.
         console.error("[shopify-push] tick failed:", err);
       }
-      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+      await delay(intervalMs);
     }
   })();
   return {

@@ -76,7 +76,11 @@ export async function receiveFromCutter(
       fromStatus: null,
       toStatus: "received_from_cutter",
       actorUserId: input.actorUserId,
-      payload: { qtyPlanned: planned, cutterUserId: input.cutterUserId, force: input.force ?? false },
+      payload: {
+        qtyPlanned: planned,
+        cutterUserId: input.cutterUserId,
+        force: input.force ?? false,
+      },
     });
 
     await recordAudit({
@@ -135,10 +139,7 @@ export interface SubmitForQcInput {
   actorUserId?: number;
 }
 
-export async function submitForQc(
-  db: Database,
-  input: SubmitForQcInput,
-): Promise<ProductionBatch> {
+export async function submitForQc(db: Database, input: SubmitForQcInput): Promise<ProductionBatch> {
   const qty = Number(input.qty);
   if (!Number.isFinite(qty) || qty <= 0) {
     throw new ValidationFailedError("qty must be > 0");
@@ -256,10 +257,7 @@ export interface CancelBatchInput {
   actorUserId?: number;
 }
 
-export async function cancelBatch(
-  db: Database,
-  input: CancelBatchInput,
-): Promise<ProductionBatch> {
+export async function cancelBatch(db: Database, input: CancelBatchInput): Promise<ProductionBatch> {
   if (!input.reason?.trim()) {
     throw new ValidationFailedError("cancel reason is required");
   }
