@@ -13,10 +13,10 @@ Issue #7 (P3) reopened that question with a concrete user story: when Maria (flo
 
 Two designs were on the table:
 
-| Option | Verdict | Reason |
-| ------ | ------- | ------ |
-| **Variant-level metafield** (`garment_mgmt/last_batch_no` on `ProductVariant`) | **Accepted** | Minimum viable; reuses the existing push job; no new webhook infrastructure |
-| **Order-line-level metafield** (per-line metafield set via `orders/create` webhook) | Rejected | Requires Shopify webhook subscription, HMAC verification middleware, order-line FIFO assignment from inventory snapshots — order-of-magnitude more code for a P3 ask |
+| Option                                                                              | Verdict      | Reason                                                                                                                                                               |
+| ----------------------------------------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Variant-level metafield** (`garment_mgmt/last_batch_no` on `ProductVariant`)      | **Accepted** | Minimum viable; reuses the existing push job; no new webhook infrastructure                                                                                          |
+| **Order-line-level metafield** (per-line metafield set via `orders/create` webhook) | Rejected     | Requires Shopify webhook subscription, HMAC verification middleware, order-line FIFO assignment from inventory snapshots — order-of-magnitude more code for a P3 ask |
 
 ## Decision
 
@@ -31,9 +31,9 @@ The existing background job `pushPendingOnce` already finds every completed batc
 
 ### 2. Schema additions (two nullable columns, additive only)
 
-| Column | Table | Purpose |
-| ------ | ----- | ------- |
-| `shopify_variant_gid` (text, nullable) | `product_variants` | Cached GID; populated on first successful lookup. Avoids a Shopify GraphQL call on every push tick for the same variant. |
+| Column                                                            | Table                | Purpose                                                                                                                                                                       |
+| ----------------------------------------------------------------- | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `shopify_variant_gid` (text, nullable)                            | `product_variants`   | Cached GID; populated on first successful lookup. Avoids a Shopify GraphQL call on every push tick for the same variant.                                                      |
 | `shopify_batch_metafield_at` (timestamp with time zone, nullable) | `production_batches` | Idempotency marker. NULL until `metafieldsSet` succeeds. Separate from `shopify_pushed_at` so a partial failure (inventory ok, metafield failed) is retried on the next tick. |
 
 ### 3. Required Shopify scope

@@ -27,14 +27,14 @@ operation and still doesn't model dye-lot integrity.
 
 We adopt a **three-tier hybrid stack** with clear ownership boundaries:
 
-| Layer                      | Responsibility                                                                                              | Owner   |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------- | ------- |
-| Shopify                    | Storefront, online sales, payments                                                                          | Shopify |
-| ~~Cin7 Core~~              | ~~FG warehouse stock, sales orders, shipping~~ — *superseded: FG → Shopify (ADR-0005); raw materials → InvenTree (ADR-0006)* | —       |
-| Production Hub (this repo) | Apparel manufacturing data: vendors, materials, PO/receiving, lots, BOMs, cut tickets, remnants, provenance | We own  |
+| Layer                      | Responsibility                                                                                                               | Owner   |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ------- |
+| Shopify                    | Storefront, online sales, payments                                                                                           | Shopify |
+| ~~Cin7 Core~~              | ~~FG warehouse stock, sales orders, shipping~~ — _superseded: FG → Shopify (ADR-0005); raw materials → InvenTree (ADR-0006)_ | —       |
+| Production Hub (this repo) | Apparel manufacturing data: vendors, materials, PO/receiving, lots, BOMs, cut tickets, remnants, provenance                  | We own  |
 
 The Production Hub is the system of record for everything Shopify and
-Cin7 *(superseded — see ADR-0006)* cannot model. Finished-good SKUs
+Cin7 _(superseded — see ADR-0006)_ cannot model. Finished-good SKUs
 (`product_variants.fg_sku`) are the integration seam — they become the
 join key for future Shopify and InvenTree sync.
 
@@ -43,7 +43,7 @@ join key for future Shopify and InvenTree sync.
 **Positive**:
 
 - We only build what is uniquely ours (the apparel data model).
-- Shopify and Cin7 *(superseded)* keep handling storefront/warehouse — no NIH risk.
+- Shopify and Cin7 _(superseded)_ keep handling storefront/warehouse — no NIH risk.
 - Integration is deferred to iteration 3+, after the model is validated
   by the operator via CLI.
 
@@ -52,7 +52,7 @@ join key for future Shopify and InvenTree sync.
 - We carry the integration burden eventually (two sync pipelines).
 - Data lives in three places; reconciliation logic is required.
 - The FG-SKU seam must stay stable; renaming it later costs migrations
-  on the Cin7 *(superseded)* / Shopify sides.
+  on the Cin7 _(superseded)_ / Shopify sides.
 
 **Mitigations**:
 
