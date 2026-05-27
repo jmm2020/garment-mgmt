@@ -107,11 +107,13 @@ export async function processOrderWebhook(
   });
 }
 
-// FIFO assignment by completed_at ASC. Each candidate batch's remaining capacity is its
-// qty_actual minus the sum of all prior shopify_order_line_batches.qty against it, so the
-// algorithm survives multiple orders consuming the same batch over time.
-// Float conversion is intentional: inputs have ≤3 dp and each result is immediately
-// pinned to .toFixed(3), so there is no accumulation risk across iterations.
+// FIFO assignment by completed_at ASC (id as tiebreaker for same-millisecond completions).
+// Each candidate batch's remaining capacity is its qty_actual minus the sum of all prior
+// shopify_order_line_batches.qty against it, so the algorithm survives multiple orders
+// consuming the same batch over time.
+// Float conversion: inputs have ≤3 dp and each take is pinned to .toFixed(3). The guard
+// uses 0.0005 (half the minimum 0.001 increment) instead of 0 to absorb IEEE-754 epsilon
+// left in `remaining` after a sequence of fractional subtractions sums to exactly qtyNeeded.
 export async function assignFifoBatches(
   tx: DbExecutor,
   variantId: number,
@@ -145,12 +147,12 @@ export async function assignFifoBatches(
     .having(
       sql`${schema.productionBatches.qtyActual} - COALESCE(SUM(${schema.shopifyOrderLineBatches.qty}), 0) > 0`,
     )
-    .orderBy(asc(schema.productionBatches.completedAt));
+    .orderBy(asc(schema.productionBatches.completedAt), asc(schema.productionBatches.id));
 
   let remaining = qtyNeeded;
   const allocations: FifoAllocation[] = [];
   for (const batch of candidates) {
-    if (remaining <= 0) break;
+    if (remaining < 0.0005) break;
     const available = Number(batch.qtyActual) - Number(batch.alreadyAllocated);
     const take = Math.min(available, remaining);
     allocations.push({ batchId: batch.id, qty: take.toFixed(3) });
