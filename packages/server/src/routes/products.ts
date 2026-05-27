@@ -1,3 +1,4 @@
+import { schema } from "@garment-mgmt/db";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/middleware.js";
@@ -6,6 +7,7 @@ import {
   createProduct,
   getProduct,
   listProducts,
+  updateProductVariant,
 } from "../services/product-service.js";
 
 const createBody = z.object({
@@ -18,6 +20,13 @@ const createBody = z.object({
 });
 
 const variantBody = z.object({
+  line: z.enum(schema.LINES),
+  model: z.enum(schema.MODELS),
+  color: z.enum(schema.COLORS),
+  sizeDim: z.enum(schema.SIZES),
+  gender: z.enum(schema.GENDERS),
+  fabricType: z.enum(schema.FABRIC_TYPES),
+  seasonDim: z.string().regex(schema.SEASON_REGEX, "must match SS<YY>, FW<YY>, or EVRG"),
   size: z.string().min(1),
   colorway: z.string().min(1),
   fgSku: z.string().min(1),
@@ -51,6 +60,24 @@ export async function registerProductRoutes(app: FastifyInstance): Promise<void>
         actorUserId: req.currentUser?.id,
       });
       return reply.status(201).send(variant);
+    },
+  );
+
+  app.patch(
+    "/:id/variants/:variantId",
+    { preHandler: requireAuth(["admin", "production_staff"]) },
+    async (req, reply) => {
+      const params = req.params as { id: string; variantId: string };
+      const productId = Number(params.id);
+      const variantId = Number(params.variantId);
+      const body = variantBody.parse(req.body);
+      const variant = await updateProductVariant(req.db, {
+        productId,
+        variantId,
+        ...body,
+        actorUserId: req.currentUser?.id,
+      });
+      return reply.send(variant);
     },
   );
 }
