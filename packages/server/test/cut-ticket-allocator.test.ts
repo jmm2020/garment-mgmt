@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  pickFifo,
-  pickSingleDyeLot,
-  type Candidate,
-} from "../src/services/cut-ticket-service.js";
+import { pickFifo, pickSingleDyeLot, type Candidate } from "../src/services/cut-ticket-service.js";
 import { BusinessRuleError } from "../src/errors.js";
 
 function candidate(over: Partial<Candidate> & Pick<Candidate, "id" | "remaining">): Candidate {
@@ -29,10 +25,7 @@ describe("pickFifo", () => {
   });
 
   it("stops as soon as need is satisfied (does not visit later lots)", () => {
-    const candidates = [
-      candidate({ id: 1, remaining: 100 }),
-      candidate({ id: 2, remaining: 100 }),
-    ];
+    const candidates = [candidate({ id: 1, remaining: 100 }), candidate({ id: 2, remaining: 100 })];
     const picks = pickFifo(candidates, 30, 99);
     expect(picks).toEqual([{ lotId: 1, quantity: 30 }]);
   });

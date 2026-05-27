@@ -29,7 +29,9 @@ const validateBody = z.object({ notes: z.string().nullable().optional() });
 const reasonBody = z.object({ reason: z.string().min(1) });
 
 const listQuery = z.object({
-  status: z.enum(["cutting", "shipped", "inspecting", "validated", "rejected", "cancelled"]).optional(),
+  status: z
+    .enum(["cutting", "shipped", "inspecting", "validated", "rejected", "cancelled"])
+    .optional(),
   variantId: z.coerce.number().int().positive().optional(),
   activeOnly: z.coerce.boolean().optional(),
 });

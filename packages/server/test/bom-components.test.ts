@@ -72,8 +72,18 @@ describe("computeRequirementsFromComponents", () => {
 
   it("computes each component independently", () => {
     const components = [
-      component({ id: 1, materialVariantId: 10, quantityPerUnit: "1.0000", wasteFactorPct: "0.00" }),
-      component({ id: 2, materialVariantId: 11, quantityPerUnit: "2.0000", wasteFactorPct: "0.00" }),
+      component({
+        id: 1,
+        materialVariantId: 10,
+        quantityPerUnit: "1.0000",
+        wasteFactorPct: "0.00",
+      }),
+      component({
+        id: 2,
+        materialVariantId: 11,
+        quantityPerUnit: "2.0000",
+        wasteFactorPct: "0.00",
+      }),
     ];
     const result = computeRequirementsFromComponents(components, { M: 3 });
     expect(result[0]?.totalQuantity).toBeCloseTo(3, 6);
@@ -84,7 +94,12 @@ describe("computeRequirementsFromComponents", () => {
 
   it("preserves isVisiblePanel and bomComponentId for downstream allocator", () => {
     const components = [
-      component({ id: 42, isVisiblePanel: true, quantityPerUnit: "1.0000", wasteFactorPct: "0.00" }),
+      component({
+        id: 42,
+        isVisiblePanel: true,
+        quantityPerUnit: "1.0000",
+        wasteFactorPct: "0.00",
+      }),
     ];
     const result = computeRequirementsFromComponents(components, { M: 1 });
     expect(result[0]?.bomComponentId).toBe(42);

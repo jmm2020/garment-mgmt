@@ -7,10 +7,10 @@
 
 ADR-0001 placed finished-goods inventory in **Cin7 Core**. After the iteration-1 foundation landed, the operator (who runs both the cut floor and the Shopify storefront) clarified two requirements that don't fit that decision:
 
-1. **FG inventory must surface on Shopify the moment a batch completes.** Selling out-of-stock or missing a re-list is worse than the operational pain of running a second inventory system. The storefront *is* the source of truth in customer terms; making it secondary to Cin7 adds latency and reconciliation overhead.
+1. **FG inventory must surface on Shopify the moment a batch completes.** Selling out-of-stock or missing a re-list is worse than the operational pain of running a second inventory system. The storefront _is_ the source of truth in customer terms; making it secondary to Cin7 adds latency and reconciliation overhead.
 2. **Completed batches are a permanent forensic record.** When a customer reports a quality issue on a finished garment six months later, we need to query: which fabric lot? Which dye lot? Who cut it? Who QC'd it? What batch? When? The data needs to live in our database, not a third-party SaaS we can't query freely.
 
-The iteration-1 plan also carved out *"Sew / QC / finish / pack workflow"* as iteration-2 scope. Pulling it forward needs a station-tracking model that:
+The iteration-1 plan also carved out _"Sew / QC / finish / pack workflow"_ as iteration-2 scope. Pulling it forward needs a station-tracking model that:
 
 - Assigns each batch a unique, human-readable identifier (printable on floor tags)
 - Tracks status transitions from cut → pre-production → production → QC → completed
@@ -24,11 +24,11 @@ The iteration-1 plan also carved out *"Sew / QC / finish / pack workflow"* as it
 
 The ownership boundary changes for FG inventory only:
 
-| Layer                      | Responsibility                                                                                              | Owner   |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------- | ------- |
-| **Shopify**                | Storefront, online sales, payments, **and FG inventory of record**                                          | Shopify |
-| Cin7 Core                  | *Role under review — see Open Questions*                                                                    | Cin7    |
-| Production Hub (this repo) | Apparel manufacturing data + **production batches + station tracking + FG SKU generation**                  | We own  |
+| Layer                      | Responsibility                                                                             | Owner   |
+| -------------------------- | ------------------------------------------------------------------------------------------ | ------- |
+| **Shopify**                | Storefront, online sales, payments, **and FG inventory of record**                         | Shopify |
+| Cin7 Core                  | _Role under review — see Open Questions_                                                   | Cin7    |
+| Production Hub (this repo) | Apparel manufacturing data + **production batches + station tracking + FG SKU generation** | We own  |
 
 On batch `completed`, the Production Hub calls Shopify Admin API `inventoryAdjustQuantities` to credit the configured `SHOPIFY_LOCATION_ID` with `qty_actual` units against the FG SKU. The SKU and qty are also recorded in `production_batches` so we retain a permanent record independent of Shopify.
 
@@ -36,36 +36,36 @@ On batch `completed`, the Production Hub calls Shopify Admin API `inventoryAdjus
 
 **`production_batches`** — the unit of work flowing through the floor.
 
-| Column                  | Notes                                                                            |
-| ----------------------- | -------------------------------------------------------------------------------- |
-| `id`                    | bigint PK                                                                        |
-| `batch_no`              | `PB-YYYY-####` (sequential per year, scannable). Unique.                         |
-| `cut_ticket_id`         | FK → `cut_tickets`. Multiple batches can derive from one cut ticket.             |
-| `product_variant_id`    | FK → `product_variants`. The variant being produced.                             |
-| `status`                | enum: `received_from_cutter`, `staged_pre_prod`, `in_production`, `awaiting_qc`, `completed`, `cancelled` |
-| `qty_planned`           | numeric(12,3) — what we expected from this slice                                 |
-| `qty_actual`            | numeric(12,3) — what came out the other side (set at QC pass)                    |
-| `cutter_user_id`        | FK → `users`. Who cut the fabric.                                                |
-| `qc_user_id`            | FK → `users`. Who passed/failed QC. Null until QC.                               |
-| `qc_verdict`            | enum: `pass`, `fail`, `pass_with_notes` · nullable until QC                      |
-| `received_at`           | timestamp · set on `received_from_cutter`                                        |
-| `started_at`            | timestamp · set on `in_production`                                               |
-| `completed_at`          | timestamp · set on `completed`                                                   |
-| `shopify_pushed_at`     | timestamp · set after successful Shopify push (idempotency marker)               |
-| `notes`                 | text · operator notes                                                            |
+| Column               | Notes                                                                                                     |
+| -------------------- | --------------------------------------------------------------------------------------------------------- |
+| `id`                 | bigint PK                                                                                                 |
+| `batch_no`           | `PB-YYYY-####` (sequential per year, scannable). Unique.                                                  |
+| `cut_ticket_id`      | FK → `cut_tickets`. Multiple batches can derive from one cut ticket.                                      |
+| `product_variant_id` | FK → `product_variants`. The variant being produced.                                                      |
+| `status`             | enum: `received_from_cutter`, `staged_pre_prod`, `in_production`, `awaiting_qc`, `completed`, `cancelled` |
+| `qty_planned`        | numeric(12,3) — what we expected from this slice                                                          |
+| `qty_actual`         | numeric(12,3) — what came out the other side (set at QC pass)                                             |
+| `cutter_user_id`     | FK → `users`. Who cut the fabric.                                                                         |
+| `qc_user_id`         | FK → `users`. Who passed/failed QC. Null until QC.                                                        |
+| `qc_verdict`         | enum: `pass`, `fail`, `pass_with_notes` · nullable until QC                                               |
+| `received_at`        | timestamp · set on `received_from_cutter`                                                                 |
+| `started_at`         | timestamp · set on `in_production`                                                                        |
+| `completed_at`       | timestamp · set on `completed`                                                                            |
+| `shopify_pushed_at`  | timestamp · set after successful Shopify push (idempotency marker)                                        |
+| `notes`              | text · operator notes                                                                                     |
 
 **`production_events`** — append-only station-transition log.
 
-| Column            | Notes                                                              |
-| ----------------- | ------------------------------------------------------------------ |
-| `id`              | bigint PK                                                          |
-| `batch_id`        | FK → `production_batches`                                          |
-| `from_status`     | nullable (first event has none)                                    |
-| `to_status`       | the new status                                                     |
-| `actor_user_id`   | FK → `users`                                                       |
-| `qty`             | numeric(12,3) · nullable · used on `awaiting_qc` → `completed`     |
-| `notes`           | text                                                               |
-| `occurred_at`     | timestamp · default `now()` · indexed                              |
+| Column          | Notes                                                          |
+| --------------- | -------------------------------------------------------------- |
+| `id`            | bigint PK                                                      |
+| `batch_id`      | FK → `production_batches`                                      |
+| `from_status`   | nullable (first event has none)                                |
+| `to_status`     | the new status                                                 |
+| `actor_user_id` | FK → `users`                                                   |
+| `qty`           | numeric(12,3) · nullable · used on `awaiting_qc` → `completed` |
+| `notes`         | text                                                           |
+| `occurred_at`   | timestamp · default `now()` · indexed                          |
 
 This table is **append-only**. Status changes go through named transition functions (`receiveFromCutter`, `stageForProduction`, `startProduction`, `submitForQc`, `completeBatch`, `cancelBatch`) which validate the current `production_batches.status`, update it, and insert a `production_events` row in the same transaction.
 
@@ -73,15 +73,15 @@ This table is **append-only**. Status changes go through named transition functi
 
 `product_variants` gains dimension columns and a derived SKU:
 
-| New column      | Type            | Notes                                                |
-| --------------- | --------------- | ---------------------------------------------------- |
-| `line`          | varchar(16)     | e.g., `PERF`, `HERIT`                                |
-| `model`         | varchar(16)     | e.g., `HOOD`, `TEE`, `JACKET`                        |
-| `color`         | varchar(16)     | e.g., `BLK`, `OLV`, `RUST`                           |
-| `size`          | varchar(8)      | e.g., `S`, `M`, `L`, `XL`, `2XL`                     |
-| `gender`        | varchar(8)      | enum: `MENS`, `WOMENS`, `UNISEX`, `YOUTH`            |
-| `season`        | varchar(8)      | e.g., `SS26`, `FW26`, `EVRG` (evergreen)             |
-| `fabric_type`   | varchar(16)     | e.g., `12OZ-COTTON`, `RIPSTOP`, `MERINO-200`         |
+| New column    | Type        | Notes                                        |
+| ------------- | ----------- | -------------------------------------------- |
+| `line`        | varchar(16) | e.g., `PERF`, `HERIT`                        |
+| `model`       | varchar(16) | e.g., `HOOD`, `TEE`, `JACKET`                |
+| `color`       | varchar(16) | e.g., `BLK`, `OLV`, `RUST`                   |
+| `size`        | varchar(8)  | e.g., `S`, `M`, `L`, `XL`, `2XL`             |
+| `gender`      | varchar(8)  | enum: `MENS`, `WOMENS`, `UNISEX`, `YOUTH`    |
+| `season`      | varchar(8)  | e.g., `SS26`, `FW26`, `EVRG` (evergreen)     |
+| `fabric_type` | varchar(16) | e.g., `12OZ-COTTON`, `RIPSTOP`, `MERINO-200` |
 
 The `sku` column (already exists) becomes a generated column:
 
@@ -114,7 +114,7 @@ Instead: the **batch ID** (`PB-YYYY-####`) goes on the floor tag along with the 
 2. Set `status = 'completed'`, `completed_at = now()`, `qty_actual`, `qc_verdict`, `qc_user_id`
 3. Insert a `production_events` row
 4. Audit
-5. **Return.** Shopify push runs *after* commit, in a background job.
+5. **Return.** Shopify push runs _after_ commit, in a background job.
 
 Push job (idempotent):
 
@@ -127,11 +127,11 @@ The batch is `completed` in our system whether or not Shopify is reachable. Reco
 
 ### 6. Required env vars
 
-| Variable                | Purpose                                                       |
-| ----------------------- | ------------------------------------------------------------- |
-| `SHOPIFY_SHOP_DOMAIN`   | `your-shop.myshopify.com`                                     |
-| `SHOPIFY_ADMIN_TOKEN`   | Custom-app Admin API access token                             |
-| `SHOPIFY_LOCATION_ID`   | Shopify location ID to adjust inventory against               |
+| Variable              | Purpose                                         |
+| --------------------- | ----------------------------------------------- |
+| `SHOPIFY_SHOP_DOMAIN` | `your-shop.myshopify.com`                       |
+| `SHOPIFY_ADMIN_TOKEN` | Custom-app Admin API access token               |
+| `SHOPIFY_LOCATION_ID` | Shopify location ID to adjust inventory against |
 
 Required Shopify app scopes: `write_inventory`, `read_inventory`, `read_products`, `read_locations`.
 

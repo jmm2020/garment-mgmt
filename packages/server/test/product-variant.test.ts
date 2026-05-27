@@ -49,9 +49,9 @@ describe("addProductVariant — dimension validation", () => {
         fgSku: `FG-NAVY-${tag}-1`,
       };
       await addProductVariant(db, dims);
-      await expect(
-        addProductVariant(db, { ...dims, fgSku: `FG-NAVY-${tag}-2` }),
-      ).rejects.toThrow(BusinessRuleError);
+      await expect(addProductVariant(db, { ...dims, fgSku: `FG-NAVY-${tag}-2` })).rejects.toThrow(
+        BusinessRuleError,
+      );
     });
   });
 });

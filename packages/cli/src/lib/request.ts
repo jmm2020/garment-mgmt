@@ -26,11 +26,7 @@ export function saveSession(s: Session): void {
   writeFileSync(SESSION_FILE, JSON.stringify(s), { mode: 0o600 });
 }
 
-export async function request(
-  method: string,
-  path: string,
-  body?: unknown,
-): Promise<unknown> {
+export async function request(method: string, path: string, body?: unknown): Promise<unknown> {
   const session = loadSession();
   const host = session?.host ?? DEFAULT_HOST;
   const headers: Record<string, string> = { "content-type": "application/json" };

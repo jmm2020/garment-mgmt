@@ -153,9 +153,8 @@ export async function seedValidatedPvt(
   db: Database,
   fixture: ProductionFixture,
 ): Promise<schema.ProductionValidationRun> {
-  const { createPvtRun, markPvtShipped, markPvtReceived, validatePvt } = await import(
-    "../../src/services/pvt-service.js"
-  );
+  const { createPvtRun, markPvtShipped, markPvtReceived, validatePvt } =
+    await import("../../src/services/pvt-service.js");
 
   const run = await createPvtRun(db, {
     productVariantId: fixture.variantId,

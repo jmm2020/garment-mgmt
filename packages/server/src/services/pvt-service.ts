@@ -295,10 +295,7 @@ async function resolveValidityMonths(db: DbExecutor, variantId: number): Promise
   const rows = await db
     .select({ months: schema.products.pvtValidityMonths })
     .from(schema.products)
-    .innerJoin(
-      schema.productVariants,
-      eq(schema.productVariants.productId, schema.products.id),
-    )
+    .innerJoin(schema.productVariants, eq(schema.productVariants.productId, schema.products.id))
     .where(eq(schema.productVariants.id, variantId));
   const override = rows[0]?.months ?? null;
   return override ?? DEFAULT_VALIDITY_MONTHS;
