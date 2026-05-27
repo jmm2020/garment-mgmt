@@ -8,7 +8,7 @@ Guidance for AI coding agents (Claude Code, Cursor, Codex, etc.) working in this
 
 ## Identity
 
-`garment-mgmt` is the **Production Hub** — the custom-built half of a hybrid apparel-manufacturing stack. Shopify owns storefront + finished-goods inventory (per ADR-0005). Cin7 Core may hold raw materials (TBD in iter 2). This repo owns:
+`garment-mgmt` is the **Production Hub** — the custom-built half of a hybrid apparel-manufacturing stack. Shopify owns storefront + finished-goods inventory (per ADR-0005). InvenTree holds raw materials (per ADR-0006). This repo owns:
 
 - vendors, materials, material lots, dye-lot integrity
 - purchase orders + receipts + lot movements ledger

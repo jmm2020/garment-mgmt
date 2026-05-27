@@ -156,9 +156,9 @@ Required Shopify app scopes: `write_inventory`, `read_inventory`, `read_products
 - Dimensions are validated by Zod against allowlists in `packages/server/src/services/product-service.ts`.
 - A backfill plan exists for any variants created pre-ADR (`pnpm --filter @garment-mgmt/db backfill-sku`).
 
-## Open questions (defer to a follow-up ADR)
+## Open questions
 
-1. **What does Cin7 own now?** If raw materials only — fine, ADR-0006 documents that. If Cin7 drops entirely — we replace it with another raw-material tracker or absorb that role here. Decision belongs to the operator; not blocking iteration 2.
+1. ~~**What does Cin7 own now?**~~ **Resolved (2026-05-27):** Cin7 is dropped entirely. Raw-material tracking moves to **InvenTree** (MIT-licensed, self-hosted). See ADR-0006 for the full decision, ownership boundaries, and iter-3 integration plan.
 2. **Should each batch have a Shopify metafield with the batch ID?** That would let customer service trace a Shopify order line back to a batch without leaving the Shopify admin. Lift is small; deferring to iteration 3 (UI) where the operator will have a "look up batch" workflow anyway.
 
 ## Related
