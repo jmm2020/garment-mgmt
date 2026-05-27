@@ -2,7 +2,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { env } from "../env.js";
-import { ValidationFailedError } from "../errors.js";
+import { AuthError, ValidationFailedError } from "../errors.js";
 import { processOrderWebhook } from "../services/shopify-webhook-service.js";
 
 // Shopify's `id` and `line_items[].id` may serialize as JSON numbers in older API
@@ -37,7 +37,7 @@ export async function registerWebhookRoutes(app: FastifyInstance): Promise<void>
     if (secret) {
       const header = (req.headers["x-shopify-hmac-sha256"] as string | undefined) ?? "";
       if (!verifyHmac(rawBody, secret, header)) {
-        throw new ValidationFailedError("hmac_verification_failed");
+        throw new AuthError("unauthorized", "hmac_verification_failed");
       }
     }
 
@@ -52,7 +52,7 @@ export async function registerWebhookRoutes(app: FastifyInstance): Promise<void>
       throw err;
     }
 
-    await processOrderWebhook(req.db, parsed);
+    await processOrderWebhook(req.db, parsed, req.log);
     return reply.status(200).send({ ok: true });
   });
 }

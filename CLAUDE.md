@@ -158,7 +158,9 @@ packages/server/src/
     bom-service.ts         ← + activateBom + computeRequirementsFromComponents
     cut-ticket-service.ts  ← + pickFifo + pickSingleDyeLot (exported pure fns)
     product-service.ts
+    shopify-webhook-service.ts  ← processOrderWebhook, assignFifoBatches, findBatchesByOrder
   routes/                  ← One file per resource. Routes are Zod-validated thin wrappers.
+  routes/webhooks.ts       ← POST /webhooks/orders (Shopify orders/create, HMAC-gated)
   app.ts                   ← buildApp(): env parse → drizzle → routes → setErrorHandler
 ```
 

@@ -9,6 +9,7 @@ import {
   submitForQc,
 } from "../src/services/production-batch-service.js";
 import {
+  assignFifoBatches,
   findBatchesByOrder,
   processOrderWebhook,
   type ShopifyOrderPayload,
@@ -62,6 +63,12 @@ describe("processOrderWebhook — FIFO mapping", () => {
       expect(rows[0]?.qty).toBe("5.000");
       expect(rows[0]?.cutTicketId).toBe(fx.productionCutTicketId);
       expect(rows[0]?.fabricLotIds).toEqual([]);
+      const auditRows = await db
+        .select()
+        .from(schema.auditLog)
+        .where(eq(schema.auditLog.action, "shopify.order.line.assigned"));
+      expect(auditRows).toHaveLength(1);
+      expect(auditRows[0]?.entityType).toBe("shopify_order_line_batch");
     });
   });
 
@@ -137,6 +144,132 @@ describe("processOrderWebhook — FIFO mapping", () => {
       });
       await processOrderWebhook(db, makePayload("ORDER-6", "LINE-6", fx.variantSku, 5));
       expect(await findBatchesByOrder(db, "ORDER-6")).toHaveLength(0);
+    });
+  });
+
+  it("second independent order takes only the remaining capacity from a partially consumed batch", async () => {
+    await withTestDb(async (db) => {
+      const fx = await seedProductionFixture(db);
+      await seedValidatedPvt(db, fx);
+      const batch = await makeCompletedBatch(db, fx, "10");
+
+      await processOrderWebhook(db, makePayload("ORDER-A", "LINE-A", fx.variantSku, 7));
+      await processOrderWebhook(db, makePayload("ORDER-B", "LINE-B", fx.variantSku, 5));
+
+      const rowsB = await findBatchesByOrder(db, "ORDER-B");
+      expect(rowsB).toHaveLength(1);
+      expect(rowsB[0]?.batchNo).toBe(batch.batchNo);
+      expect(rowsB[0]?.qty).toBe("3.000");
+    });
+  });
+
+  it("skips a fully exhausted batch for a subsequent order", async () => {
+    await withTestDb(async (db) => {
+      const fx = await seedProductionFixture(db);
+      await seedValidatedPvt(db, fx);
+      await makeCompletedBatch(db, fx, "4");
+
+      await processOrderWebhook(db, makePayload("ORDER-X", "LINE-X", fx.variantSku, 4));
+      await processOrderWebhook(db, makePayload("ORDER-Y", "LINE-Y", fx.variantSku, 1));
+
+      expect(await findBatchesByOrder(db, "ORDER-Y")).toHaveLength(0);
+    });
+  });
+
+  it("processes only hub-known SKUs when an order has mixed-SKU line items", async () => {
+    await withTestDb(async (db) => {
+      const fx = await seedProductionFixture(db);
+      await seedValidatedPvt(db, fx);
+      await makeCompletedBatch(db, fx, "10");
+
+      const payload: ShopifyOrderPayload = {
+        id: "ORDER-MULTI",
+        line_items: [
+          { id: "LINE-KNOWN", sku: fx.variantSku, quantity: 3 },
+          { id: "LINE-UNKNOWN", sku: "EXTERNAL-DROPSHIP-SKU", quantity: 2 },
+        ],
+      };
+      await processOrderWebhook(db, payload);
+
+      const rows = await findBatchesByOrder(db, "ORDER-MULTI");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.lineItemId).toBe("LINE-KNOWN");
+      expect(rows[0]?.qty).toBe("3.000");
+    });
+  });
+
+  it("includes fabric lot IDs in the forensic row when cut_ticket_lots exist", async () => {
+    await withTestDb(async (db) => {
+      const fx = await seedProductionFixture(db);
+      await seedValidatedPvt(db, fx);
+
+      // Seed: vendor → material → material_variant → material_lot → bom_component → cut_ticket_lot
+      const tag = `fabric-${Date.now()}`;
+      const [vendor] = await db
+        .insert(schema.vendors)
+        .values({ code: `V-${tag}`, name: `Vendor ${tag}`, vendorType: "mill" })
+        .returning();
+      if (!vendor) throw new Error("vendor insert failed");
+
+      const [material] = await db
+        .insert(schema.materials)
+        .values({
+          sku: `MAT-${tag}`,
+          name: `Material ${tag}`,
+          materialType: "fabric_shell",
+          unitOfMeasure: "yard",
+        })
+        .returning();
+      if (!material) throw new Error("material insert failed");
+
+      const [matVariant] = await db
+        .insert(schema.materialVariants)
+        .values({ materialId: material.id, variantSku: `MV-${tag}` })
+        .returning();
+      if (!matVariant) throw new Error("materialVariant insert failed");
+
+      const [matLot] = await db
+        .insert(schema.materialLots)
+        .values({
+          materialVariantId: matVariant.id,
+          lotCode: `LOT-${tag}`,
+          quantityReceived: "20.000",
+          quantityRemaining: "20.000",
+        })
+        .returning();
+      if (!matLot) throw new Error("materialLot insert failed");
+
+      const [bomComp] = await db
+        .insert(schema.bomComponents)
+        .values({
+          bomId: fx.bomId,
+          materialVariantId: matVariant.id,
+          quantityPerUnit: "1.5000",
+          unitOfMeasure: "yard",
+        })
+        .returning();
+      if (!bomComp) throw new Error("bomComponent insert failed");
+
+      await db.insert(schema.cutTicketLots).values({
+        cutTicketId: fx.productionCutTicketId,
+        materialLotId: matLot.id,
+        bomComponentId: bomComp.id,
+        plannedQuantity: "15.000",
+      });
+
+      await makeCompletedBatch(db, fx, "10");
+      await processOrderWebhook(db, makePayload("ORDER-LOTS", "LINE-LOTS", fx.variantSku, 3));
+
+      const rows = await findBatchesByOrder(db, "ORDER-LOTS");
+      expect(rows).toHaveLength(1);
+      expect(rows[0]?.fabricLotIds).toContain(matLot.id);
+    });
+  });
+
+  it("assignFifoBatches returns empty for non-positive qty", async () => {
+    await withTestDb(async (db) => {
+      const result = await assignFifoBatches(db, 999, 0);
+      expect(result).toEqual([]);
     });
   });
 });

@@ -1,5 +1,5 @@
 import { schema, type Database, type DbExecutor } from "@garment-mgmt/db";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, sql } from "drizzle-orm";
 import { recordAudit } from "./audit-service.js";
 
 // Shape we consume from a Shopify orders/create payload. The webhook route validates
@@ -29,11 +29,20 @@ interface FifoAllocation {
 }
 
 // Idempotent webhook entry point. The (shopify_order_id, line_item_id, batch_id) unique
-// index makes a duplicate insert a no-op; we ALSO short-circuit at the top to avoid
-// pointlessly walking the FIFO query a second time for a Shopify replay.
+// index is the hard concurrency guard; onConflictDoNothing drops a duplicate even if
+// two deliveries race past the early-return check below. The early-return is a perf
+// optimisation only — it avoids a pointless FIFO walk on confirmed replays.
+//
+// Known concurrency window: two concurrent deliveries for *different* order IDs can both
+// pass the early-return check and both enter db.transaction. Under READ COMMITTED each
+// sees the other's pre-commit FIFO state; the unique index on the insert is the safety
+// net. Impact is a data-quality edge case (possible over-allocation on high-replay load),
+// not financial loss. Revisit with SELECT ... FOR UPDATE on batch rows if this table is
+// ever used for hard capacity planning.
 export async function processOrderWebhook(
   db: Database,
   payload: ShopifyOrderPayload,
+  log?: { warn(obj: object, msg: string): void },
 ): Promise<void> {
   const existing = await db
     .select({ id: schema.shopifyOrderLineBatches.id })
@@ -51,10 +60,22 @@ export async function processOrderWebhook(
         .select({ id: schema.productVariants.id })
         .from(schema.productVariants)
         .where(eq(schema.productVariants.sku, sku));
-      if (!variant) continue;
+      if (!variant) {
+        log?.warn(
+          { shopifyOrderId: payload.id, lineItemId: line.id, sku },
+          "line item SKU not found in Hub — skipping",
+        );
+        continue;
+      }
 
       const allocations = await assignFifoBatches(tx, variant.id, line.quantity);
-      if (allocations.length === 0) continue;
+      if (allocations.length === 0) {
+        log?.warn(
+          { shopifyOrderId: payload.id, lineItemId: line.id, sku },
+          "no completed inventory for SKU — line item unattributed",
+        );
+        continue;
+      }
 
       for (const alloc of allocations) {
         const [row] = await tx
@@ -89,49 +110,52 @@ export async function processOrderWebhook(
 // FIFO assignment by completed_at ASC. Each candidate batch's remaining capacity is its
 // qty_actual minus the sum of all prior shopify_order_line_batches.qty against it, so the
 // algorithm survives multiple orders consuming the same batch over time.
+// Float conversion is intentional: inputs have ≤3 dp and each result is immediately
+// pinned to .toFixed(3), so there is no accumulation risk across iterations.
 export async function assignFifoBatches(
   tx: DbExecutor,
   variantId: number,
   qtyNeeded: number,
 ): Promise<FifoAllocation[]> {
   if (!(qtyNeeded > 0)) return [];
+
+  // Single query: completed batches with their already-allocated qty pre-computed via LEFT
+  // JOIN + GROUP BY. This eliminates N+1 round-trips for variants with many completed
+  // batches. HAVING pre-filters to batches with positive remaining capacity, so the JS
+  // loop only iterates over candidates that can still absorb units.
   const candidates = await tx
     .select({
       id: schema.productionBatches.id,
       qtyActual: schema.productionBatches.qtyActual,
+      alreadyAllocated: sql<string>`COALESCE(SUM(${schema.shopifyOrderLineBatches.qty}), 0)`,
     })
     .from(schema.productionBatches)
+    .leftJoin(
+      schema.shopifyOrderLineBatches,
+      eq(schema.shopifyOrderLineBatches.batchId, schema.productionBatches.id),
+    )
     .where(
       and(
         eq(schema.productionBatches.status, "completed"),
         eq(schema.productionBatches.productVariantId, variantId),
+        isNotNull(schema.productionBatches.qtyActual),
       ),
+    )
+    .groupBy(schema.productionBatches.id, schema.productionBatches.qtyActual)
+    .having(
+      sql`${schema.productionBatches.qtyActual} - COALESCE(SUM(${schema.shopifyOrderLineBatches.qty}), 0) > 0`,
     )
     .orderBy(asc(schema.productionBatches.completedAt));
 
   let remaining = qtyNeeded;
   const allocations: FifoAllocation[] = [];
-
   for (const batch of candidates) {
     if (remaining <= 0) break;
-    if (!batch.qtyActual) continue;
-
-    const [allocatedRow] = await tx
-      .select({
-        total: sql<string>`COALESCE(SUM(${schema.shopifyOrderLineBatches.qty}), 0)`,
-      })
-      .from(schema.shopifyOrderLineBatches)
-      .where(eq(schema.shopifyOrderLineBatches.batchId, batch.id));
-
-    const alreadyAllocated = Number(allocatedRow?.total ?? 0);
-    const available = Number(batch.qtyActual) - alreadyAllocated;
-    if (available <= 0) continue;
-
+    const available = Number(batch.qtyActual) - Number(batch.alreadyAllocated);
     const take = Math.min(available, remaining);
     allocations.push({ batchId: batch.id, qty: take.toFixed(3) });
     remaining -= take;
   }
-
   return allocations;
 }
 

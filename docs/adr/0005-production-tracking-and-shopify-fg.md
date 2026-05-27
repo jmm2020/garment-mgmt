@@ -127,11 +127,19 @@ The batch is `completed` in our system whether or not Shopify is reachable. Reco
 
 ### 6. Required env vars
 
+**Outbound (inventory push)**
+
 | Variable              | Purpose                                         |
 | --------------------- | ----------------------------------------------- |
 | `SHOPIFY_SHOP_DOMAIN` | `your-shop.myshopify.com`                       |
 | `SHOPIFY_ADMIN_TOKEN` | Custom-app Admin API access token               |
 | `SHOPIFY_LOCATION_ID` | Shopify location ID to adjust inventory against |
+
+**Inbound (webhook)**
+
+| Variable                 | Purpose                                                                             |
+| ------------------------ | ----------------------------------------------------------------------------------- |
+| `SHOPIFY_WEBHOOK_SECRET` | HMAC-SHA256 secret for `orders/create` webhook. Absent → verification skipped (dev/CI). Must be set in production. |
 
 Required Shopify app scopes: `write_inventory`, `read_inventory`, `read_products`, `read_locations`.
 
@@ -159,7 +167,7 @@ Required Shopify app scopes: `write_inventory`, `read_inventory`, `read_products
 ## Open questions
 
 1. ~~**What does Cin7 own now?**~~ **Resolved (2026-05-27):** Cin7 is dropped entirely. Raw-material tracking moves to **InvenTree** (MIT-licensed, self-hosted). See ADR-0006 for the full decision, ownership boundaries, and iter-3 integration plan.
-2. **Should each batch have a Shopify metafield with the batch ID?** That would let customer service trace a Shopify order line back to a batch without leaving the Shopify admin. Lift is small; deferring to iteration 3 (UI) where the operator will have a "look up batch" workflow anyway.
+2. ~~**Should each batch have a Shopify metafield with the batch ID?**~~ **Resolved (PR #25, 2026-05-27):** Implemented as an inbound `orders/create` webhook instead. Shopify posts to `POST /webhooks/orders`; the service allocates FIFO batches and inserts `shopify_order_line_batches` rows. The operator queries from our side via `gm batch find --order <shopifyOrderId>` or `GET /api/batches/by-order`. This keeps the forensic record in our DB rather than in Shopify metafields, consistent with the goals in §2 of this ADR.
 
 ## Related
 

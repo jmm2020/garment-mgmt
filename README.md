@@ -111,6 +111,15 @@ Session is persisted to `~/.garment-mgmt/session` after login.
 | `gm ct show <id>`                    | Cut ticket with allocations                    |
 | `gm ct close <id>`                   | Close ticket — stdin: `{"actuals":[...]}`      |
 | `gm lot provenance <id>`             | Walk lot → PO line → PO → vendor + movements   |
+| `gm batch list [--status <s>]`                            | List batches, optionally filtered by status            |
+| `gm batch show <batchNoOrId>`                             | Show batch with events                                 |
+| `gm batch stage <batchNo>`                                | Advance to `staged_pre_prod`                           |
+| `gm batch start <batchNo>`                                | Advance to `in_production`                             |
+| `gm batch submit-qc <batchNo> --qty <n>`                  | Submit for QC                                          |
+| `gm batch complete <batchNo> --qty <n> --verdict <v>`     | Complete batch; triggers Shopify inventory push        |
+| `gm batch cancel <batchNo> --reason <r>`                  | Cancel batch                                           |
+| `gm batch find <batchNo>`                                 | Forensic lookup by `PB-YYYY-####`                      |
+| `gm batch find --order <shopifyOrderId>`                  | Reverse lookup: Shopify order → batches + cut tickets + fabric lots |
 
 ## HTTP API
 
@@ -126,6 +135,8 @@ Mounted under `/` from `packages/server/src/routes/`. All mutating endpoints req
 | `lots`           | `GET /lots/:id`, `GET /lots/:id/provenance`, `POST /pos/:lineId/receive`               |
 | `boms`           | `GET/POST /boms`, `POST /boms/:id/approve`, `POST /boms/:id/activate`                  |
 | `cut-tickets`    | `GET/POST /cut-tickets`, `POST /cut-tickets/:id/mark-cutting`, `…/close`, `…/cancel`   |
+| `batches`        | `GET/POST /api/batches`, `GET /api/batches/by-order?order=<id>`, `GET /api/batches/:ref`, `POST /api/batches/:ref/stage`, `…/start`, `…/submit-qc`, `…/complete`, `…/cancel` |
+| `webhooks`       | `POST /webhooks/orders` (Shopify `orders/create` — HMAC-verified when `SHOPIFY_WEBHOOK_SECRET` is set; no session auth required) |
 
 Errors are emitted by the central handler with stable shape:
 
@@ -149,13 +160,19 @@ Errors are emitted by the central handler with stable shape:
 | `SEED_ADMIN_EMAIL`      | Email used by `pnpm seed`                                     |
 | `SEED_ADMIN_PASSWORD`   | Password used by `pnpm seed`                                  |
 
-**Iteration 2 adds** (will land with ADR-0005):
+**Iteration 2 — Shopify outbound push** (required when pushing FG inventory to Shopify):
 
-| Variable                | Purpose                                                       |
-| ----------------------- | ------------------------------------------------------------- |
-| `SHOPIFY_SHOP_DOMAIN`   | `your-shop.myshopify.com`                                     |
-| `SHOPIFY_ADMIN_TOKEN`   | Custom-app Admin API access token                             |
-| `SHOPIFY_LOCATION_ID`   | Shopify location to adjust inventory against                  |
+| Variable                   | Purpose                                                       |
+| -------------------------- | ------------------------------------------------------------- |
+| `SHOPIFY_SHOP_DOMAIN`      | `your-shop.myshopify.com`                                     |
+| `SHOPIFY_ADMIN_TOKEN`      | Custom-app Admin API access token                             |
+| `SHOPIFY_LOCATION_ID`      | Shopify location to adjust inventory against                  |
+
+**Iteration 2 — Shopify inbound webhook** (required for order → batch reverse lookup):
+
+| Variable                   | Purpose                                                                              |
+| -------------------------- | ------------------------------------------------------------------------------------ |
+| `SHOPIFY_WEBHOOK_SECRET`   | HMAC secret matching the Shopify app webhook config. Absent → verification skipped (CI/dev only). **Must be set in production.** |
 
 ## Testing
 
