@@ -67,9 +67,12 @@ describe("production batch — happy path", () => {
       expect(result.scanned).toBe(1);
       expect(result.pushed).toBe(1);
       expect(result.failed).toBe(0);
+      expect(result.metafieldSet).toBe(1);
+      expect(result.metafieldFailed).toBe(0);
 
       const afterPush = await loadBatch(db, completed.id);
       expect(afterPush.shopifyPushedAt).not.toBeNull();
+      expect(afterPush.shopifyBatchMetafieldAt).not.toBeNull();
     });
   });
 
@@ -159,6 +162,66 @@ describe("production batch — forensic lookup", () => {
       const detail = await getBatch(db, batch.id);
       expect(detail.shopifyPushedAt?.getTime()).toBe(ts.getTime());
       expect(detail.events.some((e) => e.eventType === "shopify_push_succeeded")).toBe(true);
+    });
+  });
+
+  it("retries metafield write for batches with shopify_pushed_at set but shopify_batch_metafield_at null", async () => {
+    await withTestDb(async (db) => {
+      const fx = await seedProductionFixture(db);
+      await seedValidatedPvt(db, fx);
+      const batch = await receiveFromCutter(db, {
+        cutTicketId: fx.productionCutTicketId,
+        productVariantId: fx.variantId,
+        qtyPlanned: "5",
+        cutterUserId: fx.userId,
+      });
+      await stageForProduction(db, batch.id, fx.userId);
+      await startProduction(db, batch.id, fx.userId);
+      await submitForQc(db, { ref: batch.id, qty: "5", actorUserId: fx.userId });
+      await completeBatch(db, {
+        ref: batch.id,
+        qty: "5",
+        verdict: "pass",
+        actorUserId: fx.userId,
+      });
+
+      await markShopifyPushed(db, batch.id, new Date(), { sku: fx.variantSku, delta: 5 });
+
+      const result = await pushPendingOnce(db, { testMode: true });
+      expect(result.scanned).toBe(1);
+      expect(result.pushed).toBe(0);
+      expect(result.metafieldSet).toBe(1);
+      expect(result.metafieldFailed).toBe(0);
+
+      const afterPush = await loadBatch(db, batch.id);
+      expect(afterPush.shopifyBatchMetafieldAt).not.toBeNull();
+    });
+  });
+
+  it("writes shopify_batch_metafield_set event on successful metafield write", async () => {
+    await withTestDb(async (db) => {
+      const fx = await seedProductionFixture(db);
+      await seedValidatedPvt(db, fx);
+      const batch = await receiveFromCutter(db, {
+        cutTicketId: fx.productionCutTicketId,
+        productVariantId: fx.variantId,
+        qtyPlanned: "5",
+        cutterUserId: fx.userId,
+      });
+      await stageForProduction(db, batch.id, fx.userId);
+      await startProduction(db, batch.id, fx.userId);
+      await submitForQc(db, { ref: batch.id, qty: "5", actorUserId: fx.userId });
+      await completeBatch(db, {
+        ref: batch.id,
+        qty: "5",
+        verdict: "pass",
+        actorUserId: fx.userId,
+      });
+
+      await pushPendingOnce(db, { testMode: true });
+
+      const detail = await getBatch(db, batch.id);
+      expect(detail.events.some((e) => e.eventType === "shopify_batch_metafield_set")).toBe(true);
     });
   });
 });

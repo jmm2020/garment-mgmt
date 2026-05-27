@@ -88,6 +88,46 @@ export async function recordShopifyFailure(
   });
 }
 
+export async function cacheVariantGid(
+  db: DbExecutor,
+  variantId: number,
+  gid: string,
+): Promise<void> {
+  await db
+    .update(schema.productVariants)
+    .set({ shopifyVariantGid: gid, updatedAt: new Date() })
+    .where(eq(schema.productVariants.id, variantId));
+}
+
+export async function markBatchMetafieldWritten(
+  db: DbExecutor,
+  batchId: number,
+  writtenAt: Date,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  await db
+    .update(schema.productionBatches)
+    .set({ shopifyBatchMetafieldAt: writtenAt, updatedAt: new Date() })
+    .where(eq(schema.productionBatches.id, batchId));
+  await db.insert(schema.productionEvents).values({
+    batchId,
+    eventType: "shopify_batch_metafield_set",
+    payload,
+  });
+}
+
+export async function recordBatchMetafieldFailure(
+  db: DbExecutor,
+  batchId: number,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  await db.insert(schema.productionEvents).values({
+    batchId,
+    eventType: "shopify_batch_metafield_failed",
+    payload,
+  });
+}
+
 export async function loadBatch(db: DbExecutor, ref: BatchRef): Promise<ProductionBatch> {
   const where =
     typeof ref === "number"

@@ -1,9 +1,17 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { schema, type Database } from "@garment-mgmt/db";
-import { and, eq, isNull, sql } from "drizzle-orm";
-import { markShopifyPushed, recordShopifyFailure } from "../services/production-batch-queries.js";
+import { and, eq, sql } from "drizzle-orm";
+import {
+  cacheVariantGid,
+  markBatchMetafieldWritten,
+  markShopifyPushed,
+  recordBatchMetafieldFailure,
+  recordShopifyFailure,
+} from "../services/production-batch-queries.js";
 import {
   inventoryAdjustQuantities,
+  lookupShopifyVariantGid,
+  setVariantMetafield,
   type ShopifyClientConfig,
 } from "../integrations/shopify-client.js";
 
@@ -11,13 +19,26 @@ export interface PushOnceResult {
   scanned: number;
   pushed: number;
   failed: number;
+  metafieldSet: number;
+  metafieldFailed: number;
 }
 
 /**
- * Single sweep: find every `completed` batch with `shopify_pushed_at IS NULL`, push its
- * delta to Shopify, mark on success / record failure on failure. Idempotent — calling
- * this twice in a row is safe; succeeded rows have `shopify_pushed_at` set and are
- * filtered out on the second pass.
+ * Single sweep: find every `completed` batch where EITHER `shopify_pushed_at IS NULL`
+ * (inventory not yet pushed) OR `shopify_batch_metafield_at IS NULL` (metafield not
+ * yet written). For each row, run two phases:
+ *
+ *   1. Inventory: skip if `shopify_pushed_at` is set; otherwise call
+ *      `inventoryAdjustQuantities`, mark on success, record failure and continue
+ *      on failure (do not attempt metafield without successful inventory push).
+ *   2. Metafield: skip if `shopify_batch_metafield_at` is set; otherwise resolve
+ *      the variant GID (cached on product_variants.shopify_variant_gid; looked up
+ *      from Shopify if absent), then call `setVariantMetafield` to write
+ *      `garment_mgmt/last_batch_no = batchNo`.
+ *
+ * Idempotent — both phases have their own marker columns. A partial failure
+ * (inventory ok, metafield failed) is retried on the next tick without re-pushing
+ * inventory. See ADR-0007.
  */
 export async function pushPendingOnce(
   db: Database,
@@ -28,7 +49,11 @@ export async function pushPendingOnce(
       id: schema.productionBatches.id,
       batchNo: schema.productionBatches.batchNo,
       qtyActual: schema.productionBatches.qtyActual,
+      shopifyPushedAt: schema.productionBatches.shopifyPushedAt,
+      shopifyBatchMetafieldAt: schema.productionBatches.shopifyBatchMetafieldAt,
       sku: schema.productVariants.sku,
+      variantId: schema.productVariants.id,
+      shopifyVariantGid: schema.productVariants.shopifyVariantGid,
     })
     .from(schema.productionBatches)
     .innerJoin(
@@ -38,43 +63,97 @@ export async function pushPendingOnce(
     .where(
       and(
         eq(schema.productionBatches.status, "completed"),
-        isNull(schema.productionBatches.shopifyPushedAt),
+        sql`(${schema.productionBatches.shopifyPushedAt} IS NULL OR ${schema.productionBatches.shopifyBatchMetafieldAt} IS NULL)`,
       ),
     )
     .orderBy(sql`${schema.productionBatches.completedAt} ASC`);
 
   let pushed = 0;
   let failed = 0;
+  let metafieldSet = 0;
+  let metafieldFailed = 0;
+
   for (const row of rows) {
+    let inventoryOk = row.shopifyPushedAt !== null;
+    if (!inventoryOk) {
+      if (!row.sku) {
+        await recordShopifyFailure(db, row.id, {
+          error: "variant has no canonical sku — backfill required",
+          batchNo: row.batchNo,
+        });
+        failed++;
+        continue;
+      }
+      const delta = Number(row.qtyActual ?? "0");
+      const result = await inventoryAdjustQuantities(cfg, row.sku, delta);
+      if (result.ok) {
+        await markShopifyPushed(db, row.id, new Date(), {
+          sku: row.sku,
+          delta,
+          attempts: result.attempts,
+          testMode: result.testMode,
+        });
+        pushed++;
+        inventoryOk = true;
+      } else {
+        await recordShopifyFailure(db, row.id, {
+          sku: row.sku,
+          delta,
+          attempts: result.attempts,
+          error: result.error,
+        });
+        failed++;
+        continue;
+      }
+    }
+
+    if (row.shopifyBatchMetafieldAt !== null) continue;
     if (!row.sku) {
-      await recordShopifyFailure(db, row.id, {
-        error: "variant has no canonical sku — backfill required",
+      await recordBatchMetafieldFailure(db, row.id, {
         batchNo: row.batchNo,
+        error: "variant has no canonical sku — metafield write skipped",
       });
-      failed++;
+      metafieldFailed++;
       continue;
     }
-    const delta = Number(row.qtyActual ?? "0");
-    const result = await inventoryAdjustQuantities(cfg, row.sku, delta);
-    if (result.ok) {
-      await markShopifyPushed(db, row.id, new Date(), {
-        sku: row.sku,
-        delta,
-        attempts: result.attempts,
-        testMode: result.testMode,
+
+    let variantGid: string | null = row.shopifyVariantGid ?? null;
+    if (!variantGid) {
+      const lookup = await lookupShopifyVariantGid(cfg, row.sku);
+      if (!lookup.ok || !lookup.gid) {
+        await recordBatchMetafieldFailure(db, row.id, {
+          batchNo: row.batchNo,
+          sku: row.sku,
+          attempts: lookup.attempts,
+          error: lookup.error ?? "gid lookup failed",
+        });
+        metafieldFailed++;
+        continue;
+      }
+      variantGid = lookup.gid;
+      await cacheVariantGid(db, row.variantId, variantGid);
+    }
+
+    const mf = await setVariantMetafield(cfg, variantGid, row.batchNo);
+    if (mf.ok) {
+      await markBatchMetafieldWritten(db, row.id, new Date(), {
+        batchNo: row.batchNo,
+        variantGid,
+        attempts: mf.attempts,
+        testMode: mf.testMode,
       });
-      pushed++;
+      metafieldSet++;
     } else {
-      await recordShopifyFailure(db, row.id, {
-        sku: row.sku,
-        delta,
-        attempts: result.attempts,
-        error: result.error,
+      await recordBatchMetafieldFailure(db, row.id, {
+        batchNo: row.batchNo,
+        variantGid,
+        attempts: mf.attempts,
+        error: mf.error,
       });
-      failed++;
+      metafieldFailed++;
     }
   }
-  return { scanned: rows.length, pushed, failed };
+  return { scanned: rows.length, pushed, failed, metafieldSet, metafieldFailed };
 }
 
 export interface PushLoopHandle {

@@ -159,7 +159,7 @@ Required Shopify app scopes: `write_inventory`, `read_inventory`, `read_products
 ## Open questions
 
 1. ~~**What does Cin7 own now?**~~ **Resolved (2026-05-27):** Cin7 is dropped entirely. Raw-material tracking moves to **InvenTree** (MIT-licensed, self-hosted). See ADR-0006 for the full decision, ownership boundaries, and iter-3 integration plan.
-2. **Should each batch have a Shopify metafield with the batch ID?** That would let customer service trace a Shopify order line back to a batch without leaving the Shopify admin. Lift is small; deferring to iteration 3 (UI) where the operator will have a "look up batch" workflow anyway.
+2. ~~**Should each batch have a Shopify metafield with the batch ID?**~~ **Resolved (2026-05-27):** Yes — variant-level `garment_mgmt/last_batch_no` written by the push job after each successful inventory adjust. See ADR-0007 for the full decision, rejected order-line-level alternative, retry semantics, and required Shopify scope (`write_metafields`).
 
 ## Related
 
