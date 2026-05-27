@@ -3,8 +3,12 @@ import { and, eq } from "drizzle-orm";
 import { BusinessRuleError, NotFoundError } from "../errors.js";
 import { recordAudit } from "./audit-service.js";
 
-function isUniqueViolation(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "23505";
+function pgErrorCode(err: unknown): string | undefined {
+  return (err as { code?: string })?.code;
+}
+
+function pgConstraint(err: unknown): string | undefined {
+  return (err as { constraint_name?: string })?.constraint_name;
 }
 
 export interface CreateProductInput {
@@ -33,16 +37,15 @@ export async function createProduct(
         description: input.description ?? null,
       })
       .returning();
-    if (!product) throw new Error("product insert returned no row");
     await recordAudit({
       db: tx,
       entityType: "product",
-      entityId: product.id,
+      entityId: product!.id,
       action: "create",
       actorUserId: input.actorUserId,
-      after: product,
+      after: product!,
     });
-    return product;
+    return product!;
   });
 }
 
@@ -101,11 +104,21 @@ export async function addProductVariant(
           sku,
         })
         .returning();
-      if (!row) throw new Error("product variant insert returned no row");
-      variant = row;
+      variant = row!;
     } catch (err) {
-      if (isUniqueViolation(err)) {
-        throw new BusinessRuleError("sku_conflict", `SKU ${sku} already exists`, { sku });
+      if (pgErrorCode(err) === "23505") {
+        const constraint = pgConstraint(err);
+        if (constraint === "product_variants_sku_idx") {
+          throw new BusinessRuleError("sku_conflict", `SKU ${sku} already exists`, { sku });
+        }
+        if (constraint === "product_variants_unique_idx") {
+          throw new BusinessRuleError(
+            "size_colorway_conflict",
+            "A variant with this size and colorway already exists for this product",
+            { productId: input.productId, size: input.size, colorway: input.colorway },
+          );
+        }
+        throw new BusinessRuleError("unique_conflict", "A conflicting variant already exists");
       }
       throw err;
     }
@@ -183,11 +196,21 @@ export async function updateProductVariant(
         })
         .where(eq(schema.productVariants.id, input.variantId))
         .returning();
-      if (!row) throw new Error("product variant update returned no row");
-      variant = row;
+      variant = row!;
     } catch (err) {
-      if (isUniqueViolation(err)) {
-        throw new BusinessRuleError("sku_conflict", `SKU ${sku} already exists`, { sku });
+      if (pgErrorCode(err) === "23505") {
+        const constraint = pgConstraint(err);
+        if (constraint === "product_variants_sku_idx") {
+          throw new BusinessRuleError("sku_conflict", `SKU ${sku} already exists`, { sku });
+        }
+        if (constraint === "product_variants_unique_idx") {
+          throw new BusinessRuleError(
+            "size_colorway_conflict",
+            "A variant with this size and colorway already exists for this product",
+            { productId: input.productId, size: input.size, colorway: input.colorway },
+          );
+        }
+        throw new BusinessRuleError("unique_conflict", "A conflicting variant already exists");
       }
       throw err;
     }

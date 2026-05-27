@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { BusinessRuleError } from "../src/errors.js";
-import { addProductVariant } from "../src/services/product-service.js";
+import { BusinessRuleError, NotFoundError } from "../src/errors.js";
+import { addProductVariant, updateProductVariant } from "../src/services/product-service.js";
 import { seedProductionFixture } from "./helpers/seed-production.js";
 import { closeTestDb, withTestDb } from "./helpers/test-db.js";
 
@@ -49,9 +49,76 @@ describe("addProductVariant — dimension validation", () => {
         fgSku: `FG-NAVY-${tag}-1`,
       };
       await addProductVariant(db, dims);
-      await expect(addProductVariant(db, { ...dims, fgSku: `FG-NAVY-${tag}-2` })).rejects.toThrow(
-        BusinessRuleError,
-      );
+      // Different size/colorway ensures only product_variants_sku_idx can fire
+      // (the composite productId+size+colorway index won't conflict)
+      await expect(
+        addProductVariant(db, {
+          ...dims,
+          size: "Large",
+          colorway: "Navy Blue",
+          fgSku: `FG-NAVY-${tag}-2`,
+        }),
+      ).rejects.toThrow(BusinessRuleError);
+    });
+  });
+});
+
+describe("updateProductVariant", () => {
+  it("updates dimensions and recomputes canonical sku", async () => {
+    await withTestDb(async (db) => {
+      const fx = await seedProductionFixture(db);
+      const tag = Date.now().toString(36);
+      const created = await addProductVariant(db, {
+        productId: fx.productId,
+        line: "BASIC",
+        model: "TEE",
+        color: "BLK",
+        sizeDim: "S",
+        gender: "WOMENS",
+        seasonDim: "FW26",
+        fabricType: "12OZ-COTTON",
+        size: "S",
+        colorway: `Navy-${tag}`,
+        fgSku: `FG-BLK-${tag}`,
+      });
+      const updated = await updateProductVariant(db, {
+        productId: fx.productId,
+        variantId: created.id,
+        line: "PERF",
+        model: "TEE",
+        color: "BLK",
+        sizeDim: "S",
+        gender: "WOMENS",
+        seasonDim: "FW26",
+        fabricType: "12OZ-COTTON",
+        size: "S",
+        colorway: `Navy-${tag}`,
+        fgSku: created.fgSku,
+      });
+      expect(updated.sku).toBe("PERF-TEE-BLK-S-WOMENS-FW26-12OZ-COTTON");
+      expect(updated.line).toBe("PERF");
+    });
+  });
+
+  it("throws NotFoundError for unknown variantId", async () => {
+    await withTestDb(async (db) => {
+      const fx = await seedProductionFixture(db);
+      await expect(
+        updateProductVariant(db, {
+          productId: fx.productId,
+          variantId: 999999,
+          line: "BASIC",
+          model: "TEE",
+          color: "BLK",
+          sizeDim: "M",
+          gender: "MENS",
+          seasonDim: "FW26",
+          fabricType: "12OZ-COTTON",
+          size: "M",
+          colorway: "Black",
+          fgSku: "FG-GHOST",
+        }),
+      ).rejects.toThrow(NotFoundError);
     });
   });
 });
