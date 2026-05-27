@@ -112,7 +112,6 @@ describe("production units — QC verdicts", () => {
       expect(failed.every((u) => u.status === "qc_rejected")).toBe(true);
       expect(failed[0]?.qcRejectedReason).toBe("seam failure");
 
-      // L-2: verify unit_qc_verdict events are emitted with correct payload
       const qcEvents = await db
         .select()
         .from(schema.productionEvents)

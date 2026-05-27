@@ -41,7 +41,7 @@ export async function mintUnits(
   qty: number,
   actorUserId?: number,
 ): Promise<ProductionUnit[]> {
-  if (!Number.isFinite(qty) || qty < 0 || !Number.isInteger(qty)) {
+  if (!Number.isInteger(qty) || qty < 0) {
     throw new ValidationFailedError("qty must be a non-negative integer");
   }
   if (qty === 0) return [];
@@ -71,7 +71,7 @@ export async function mintUnits(
   }
 
   const firstSerial = inserted[0]?.unitSerial ?? null;
-  const lastSerialOut = inserted[inserted.length - 1]?.unitSerial ?? null;
+  const lastSerial = inserted[inserted.length - 1]?.unitSerial ?? null;
 
   await db.insert(schema.productionEvents).values({
     batchId,
@@ -79,7 +79,7 @@ export async function mintUnits(
     fromStatus: null,
     toStatus: null,
     actorUserId,
-    payload: { count: qty, firstSerial, lastSerial: lastSerialOut },
+    payload: { count: qty, firstSerial, lastSerial },
   });
 
   await recordAudit({
@@ -88,7 +88,7 @@ export async function mintUnits(
     entityId: batchId,
     action: "units_minted",
     actorUserId,
-    after: { count: qty, firstSerial, lastSerial: lastSerialOut },
+    after: { count: qty, firstSerial, lastSerial },
   });
 
   return inserted;

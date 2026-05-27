@@ -17,7 +17,6 @@ const qcBody = z.object({
   reason: z.string().nullable().optional(),
 });
 
-// Registered under /api/units — single-route lookup by serial.
 export async function registerUnitRoutes(app: FastifyInstance): Promise<void> {
   app.addHook("preHandler", requireAuth());
 
@@ -27,7 +26,6 @@ export async function registerUnitRoutes(app: FastifyInstance): Promise<void> {
   });
 }
 
-// Registered under /api/batches — batch-scoped unit list + verdict POST.
 export async function registerBatchUnitRoutes(app: FastifyInstance): Promise<void> {
   app.addHook("preHandler", requireAuth());
 
