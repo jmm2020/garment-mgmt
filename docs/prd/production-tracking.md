@@ -9,7 +9,7 @@
 
 ## TL;DR
 
-Pull *"sew / QC / finish / pack workflow"* from iteration 3 forward into iteration 2. Add a **production batch** entity that flows through five floor stations (received → staged → producing → QC → completed), generate a **structured FG SKU** at variant creation, and **push completed batches to Shopify** as the new finished-goods source of truth. Gate production behind a **Production Validation Testing (PVT)** step that the company runs on a small pre-production cut before authorizing the full run.
+Pull _"sew / QC / finish / pack workflow"_ from iteration 3 forward into iteration 2. Add a **production batch** entity that flows through five floor stations (received → staged → producing → QC → completed), generate a **structured FG SKU** at variant creation, and **push completed batches to Shopify** as the new finished-goods source of truth. Gate production behind a **Production Validation Testing (PVT)** step that the company runs on a small pre-production cut before authorizing the full run.
 
 This iteration **does not** ship a UI. The CLI + REST API drive the floor workflow; UI lands in iteration 3.
 
@@ -52,9 +52,9 @@ This PRD fills that gap.
 
 ## User story
 
-> *Maria runs the cut floor. She cuts 47 pieces of fabric for batch PB-2026-0042 (Performance Hoodie, Black, Medium, Mens, SS26, 12oz Cotton — from cut ticket CT-2026-0119). She tags the bundle with the batch number, hands it off to Devon in pre-production. Devon scans the tag and runs `gm batch receive PB-2026-0042` on the floor terminal. Tomorrow the bundle gets moved to the sewing area; Devon runs `gm batch start PB-2026-0042`. Two days later, all 47 are sewn; the lead runs `gm batch submit-qc PB-2026-0042 --qty 47`. QC inspects, rejects 2, passes 45. The QC lead runs `gm batch complete PB-2026-0042 --qty 45 --verdict pass_with_notes --note "2 rejects: bad topstitch on hood seam"`. Sixty seconds later, 45 units of SKU PERF-HOOD-BLK-M-MENS-SS26-12OZ-COTTON appear in Shopify.*
+> _Maria runs the cut floor. She cuts 47 pieces of fabric for batch PB-2026-0042 (Performance Hoodie, Black, Medium, Mens, SS26, 12oz Cotton — from cut ticket CT-2026-0119). She tags the bundle with the batch number, hands it off to Devon in pre-production. Devon scans the tag and runs `gm batch receive PB-2026-0042` on the floor terminal. Tomorrow the bundle gets moved to the sewing area; Devon runs `gm batch start PB-2026-0042`. Two days later, all 47 are sewn; the lead runs `gm batch submit-qc PB-2026-0042 --qty 47`. QC inspects, rejects 2, passes 45. The QC lead runs `gm batch complete PB-2026-0042 --qty 45 --verdict pass_with_notes --note "2 rejects: bad topstitch on hood seam"`. Sixty seconds later, 45 units of SKU PERF-HOOD-BLK-M-MENS-SS26-12OZ-COTTON appear in Shopify._
 >
-> *Three months later, a customer DMs Maria: "the hood seam on the one I bought is unraveling." She queries: `gm batch find --sku PERF-HOOD-BLK-M-MENS-SS26-12OZ-COTTON --since 2026-04-01`. PB-2026-0042 comes up. She sees the QC note from Devon's lead. She pulls up the fabric lot via `gm lot provenance` from the cut ticket. The mill cert chain is two clicks away.*
+> _Three months later, a customer DMs Maria: "the hood seam on the one I bought is unraveling." She queries: `gm batch find --sku PERF-HOOD-BLK-M-MENS-SS26-12OZ-COTTON --since 2026-04-01`. PB-2026-0042 comes up. She sees the QC note from Devon's lead. She pulls up the fabric lot via `gm lot provenance` from the cut ticket. The mill cert chain is two clicks away._
 
 ---
 
@@ -67,7 +67,7 @@ Before any full production run, the company validates the pattern + fabric combi
 
 ### How it works
 
-1. **Trigger.** When the operator attempts `gm batch receive` for a `(product_variant_id, pattern/marker)` pair that has no `validated` PVT *or* whose most recent validated PVT is older than `pvt_validity_months`, the system rejects with `pvt_required` and tells them which PVT to run.
+1. **Trigger.** When the operator attempts `gm batch receive` for a `(product_variant_id, pattern/marker)` pair that has no `validated` PVT _or_ whose most recent validated PVT is older than `pvt_validity_months`, the system rejects with `pvt_required` and tells them which PVT to run.
 2. **Cutter cuts a small run** using the production pattern (the same `marker_id` the real batch will use). This produces a small lot — recorded as a normal `cut_ticket` with a `kind='pvt'` discriminator (see §3 below) so it's distinguishable from production cuts.
 3. **Cut sample is shipped to the company** for inspection. The operator runs `gm pvt mark-shipped <run-no>` when it leaves the floor.
 4. **Company inspects** — a validator on staff at the company reviews the sample. They run `gm pvt validate <run-no>` (pass) or `gm pvt reject <run-no> --reason "..."` (fail). Both record the validator's user ID and timestamp.
@@ -97,23 +97,23 @@ Before any full production run, the company validates the pattern + fabric combi
 
 ### What we track per PVT run
 
-| Field                | Notes                                                                              |
-| -------------------- | ---------------------------------------------------------------------------------- |
-| `run_no`             | `PVT-YYYY-####` — operator-facing, scannable, printed on the sample tag             |
-| `product_variant_id` | What's being validated                                                             |
-| `marker_id`          | Which pattern/marker — pattern changes invalidate prior PVTs for the same variant  |
-| `cut_ticket_id`      | The small cut ticket created for the sample (kind='pvt')                           |
-| `status`             | `cutting` → `shipped` → `inspecting` → `validated` | `rejected`                      |
-| `cutter_user_id`     | Who cut the sample                                                                 |
-| `validator_user_id`  | Who at the company inspected/validated (null until inspection)                     |
-| `cut_at`             | timestamp · when the sample was cut                                                |
-| `shipped_at`         | timestamp · when it left the floor                                                 |
-| `received_at`        | timestamp · when the company logged it as received for inspection                  |
-| `validated_at`       | timestamp · set on `validated`                                                     |
-| `rejected_at`        | timestamp · set on `rejected`                                                      |
-| `rejected_reason`    | text · required on `rejected`                                                      |
-| `expires_at`         | timestamp · computed from `validated_at + pvt_validity_months`                     |
-| `notes`              | text · validator notes (sew-time surprises, marker yield, fit feedback)            |
+| Field                | Notes                                                                             |
+| -------------------- | --------------------------------------------------------------------------------- | ---------- |
+| `run_no`             | `PVT-YYYY-####` — operator-facing, scannable, printed on the sample tag           |
+| `product_variant_id` | What's being validated                                                            |
+| `marker_id`          | Which pattern/marker — pattern changes invalidate prior PVTs for the same variant |
+| `cut_ticket_id`      | The small cut ticket created for the sample (kind='pvt')                          |
+| `status`             | `cutting` → `shipped` → `inspecting` → `validated`                                | `rejected` |
+| `cutter_user_id`     | Who cut the sample                                                                |
+| `validator_user_id`  | Who at the company inspected/validated (null until inspection)                    |
+| `cut_at`             | timestamp · when the sample was cut                                               |
+| `shipped_at`         | timestamp · when it left the floor                                                |
+| `received_at`        | timestamp · when the company logged it as received for inspection                 |
+| `validated_at`       | timestamp · set on `validated`                                                    |
+| `rejected_at`        | timestamp · set on `rejected`                                                     |
+| `rejected_reason`    | text · required on `rejected`                                                     |
+| `expires_at`         | timestamp · computed from `validated_at + pvt_validity_months`                    |
+| `notes`              | text · validator notes (sew-time surprises, marker yield, fit feedback)           |
 
 A passed PVT is the **permanent forensic record** of the pre-production check that authorized every production batch downstream. Like completed batches, PVTs are append-only after a terminal state.
 
@@ -155,7 +155,7 @@ A passed PVT is the **permanent forensic record** of the pre-production check th
 6. **CLI extensions** at `gm batch …`:
    - `gm batch receive` — stdin: `{ cutTicketId, productVariantId, qtyPlanned, cutterUserId, notes? }`
    - `gm batch list [--status …] [--sku …] [--since YYYY-MM-DD]`
-   - `gm batch show <batchNo>` (accepts `PB-YYYY-####` *or* numeric ID)
+   - `gm batch show <batchNo>` (accepts `PB-YYYY-####` _or_ numeric ID)
    - `gm batch stage <batchNo>`
    - `gm batch start <batchNo>`
    - `gm batch submit-qc <batchNo> --qty <n>`
@@ -181,7 +181,7 @@ A passed PVT is the **permanent forensic record** of the pre-production check th
     - Cancel from each non-terminal state
     - Forensic query: `find --sku --since` returns expected batches
 13. **README updates**: add `gm batch` reference, env vars table, iteration-2 status to roadmap.
-14. **Audit coverage**: every state transition writes a `recordAudit` row (batch *and* PVT transitions).
+14. **Audit coverage**: every state transition writes a `recordAudit` row (batch _and_ PVT transitions).
 15. **`production_validation_runs` entity** — full PVT model per §"Production Validation Testing" above. Includes `run_no` generator (PVT-YYYY-####), status enum, per-stage timestamps, validator + cutter user FKs, expiry.
 16. **PVT named transitions**:
     - `createPvtRun(variantId, markerId, cutterUserId, cutTicketId)` — `null` → `cutting`
@@ -219,7 +219,7 @@ A passed PVT is the **permanent forensic record** of the pre-production check th
 - Multi-cutter batches (one batch = one cutter for now)
 - Splitting a batch mid-flow (one path, no fork/merge)
 - Re-opening a `completed` batch (write a `cancelled` batch and a new one instead)
-- Shopify metafield with batch ID on order lines (ADR-0005 open question #2)
+- Order-line-level Shopify metafield with batch ID (requires Shopify webhook subscription, HMAC middleware, per-line FIFO assignment; deferred to iter 3+). Variant-level `garment_mgmt/last_batch_no` is resolved — see ADR-0007.
 - A `gm batch find --customer <order-id>` reverse-lookup (needs Shopify webhook integration; iter 3)
 - InvenTree raw-material sync (ADR-0006; Hub → InvenTree push lands in a follow-up issue)
 
@@ -229,15 +229,15 @@ A passed PVT is the **permanent forensic record** of the pre-production check th
 
 See ADR-0005 §2 + §3 for the column-level spec. Key invariants:
 
-| Invariant                                                        | Enforced by                                                       |
-| ---------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `batch_no` is unique                                             | `UNIQUE` index on `production_batches.batch_no`                   |
-| `production_events` are append-only                              | No `UPDATE` route; service layer never updates events             |
-| `shopify_pushed_at` set ⇔ Shopify call succeeded                 | Set only by push job after `2xx` response                         |
-| `qty_actual` ≤ `qty_planned` enforced by app, not DB             | Service layer; allows operator override with a `--force` flag     |
-| SKU dimensions match allowlist                                   | Zod validators in product-service                                 |
-| Status transitions follow the legal graph                        | Named transition functions reject illegal `from_status`           |
-| Generated SKU is unique across variants                          | `UNIQUE` index on `product_variants.sku`                          |
+| Invariant                                            | Enforced by                                                   |
+| ---------------------------------------------------- | ------------------------------------------------------------- |
+| `batch_no` is unique                                 | `UNIQUE` index on `production_batches.batch_no`               |
+| `production_events` are append-only                  | No `UPDATE` route; service layer never updates events         |
+| `shopify_pushed_at` set ⇔ Shopify call succeeded     | Set only by push job after `2xx` response                     |
+| `qty_actual` ≤ `qty_planned` enforced by app, not DB | Service layer; allows operator override with a `--force` flag |
+| SKU dimensions match allowlist                       | Zod validators in product-service                             |
+| Status transitions follow the legal graph            | Named transition functions reject illegal `from_status`       |
+| Generated SKU is unique across variants              | `UNIQUE` index on `product_variants.sku`                      |
 
 Legal status graph:
 
@@ -269,14 +269,14 @@ Legal status graph:
 
 ## SKU schema (concrete)
 
-| Dimension     | Allowlist (initial)                                                | Notes                                            |
-| ------------- | ------------------------------------------------------------------ | ------------------------------------------------ |
-| `line`        | `PERF`, `HERIT`, `BASIC`                                           | Add new lines via migration + allowlist update   |
-| `model`       | `HOOD`, `TEE`, `JACKET`, `PANT`, `SHORT`                           | Same                                             |
-| `color`       | `BLK`, `WHT`, `OLV`, `RUST`, `NAVY`, `CHAR`, `SAND`                | Same                                             |
-| `size`        | `XS`, `S`, `M`, `L`, `XL`, `2XL`, `3XL`                            | Stable; size-curve constants live alongside      |
-| `gender`      | `MENS`, `WOMENS`, `UNISEX`, `YOUTH`                                | Closed set                                       |
-| `season`      | `SS<YY>`, `FW<YY>`, `EVRG`                                         | Regex-validated (`^(SS|FW)\d{2}$|^EVRG$`)        |
+| Dimension     | Allowlist (initial)                                                 | Notes                                            |
+| ------------- | ------------------------------------------------------------------- | ------------------------------------------------ | --------- | -------- |
+| `line`        | `PERF`, `HERIT`, `BASIC`                                            | Add new lines via migration + allowlist update   |
+| `model`       | `HOOD`, `TEE`, `JACKET`, `PANT`, `SHORT`                            | Same                                             |
+| `color`       | `BLK`, `WHT`, `OLV`, `RUST`, `NAVY`, `CHAR`, `SAND`                 | Same                                             |
+| `size`        | `XS`, `S`, `M`, `L`, `XL`, `2XL`, `3XL`                             | Stable; size-curve constants live alongside      |
+| `gender`      | `MENS`, `WOMENS`, `UNISEX`, `YOUTH`                                 | Closed set                                       |
+| `season`      | `SS<YY>`, `FW<YY>`, `EVRG`                                          | Regex-validated (`^(SS                           | FW)\d{2}$ | ^EVRG$`) |
 | `fabric_type` | `12OZ-COTTON`, `14OZ-COTTON`, `RIPSTOP`, `MERINO-200`, `MERINO-260` | Add new fabrics via migration + allowlist update |
 
 **Sample SKUs**:
@@ -309,11 +309,11 @@ The PR is mergeable when:
 
 ## Follow-ups (filed as issues after merge)
 
-| Title                                                          | Priority |
-| -------------------------------------------------------------- | -------- |
-| ADR-0006: InvenTree for raw-material tracking — Accepted (2026-05-27) | ✅ Done |
-| Shopify metafield with batch ID on order lines                 | P3       |
-| Customer order ↔ batch reverse lookup (Shopify webhook)        | P3       |
-| Per-unit tracking under a batch (warranty workflow)            | P4       |
-| Shopify token rotation runbook                                 | P3       |
-| Sew-line capacity planning + machine assignment                | P3       |
+| Title                                                                 | Priority |
+| --------------------------------------------------------------------- | -------- |
+| ADR-0006: InvenTree for raw-material tracking — Accepted (2026-05-27) | ✅ Done  |
+| Shopify metafield with batch ID on order lines                        | P3       |
+| Customer order ↔ batch reverse lookup (Shopify webhook)               | P3       |
+| Per-unit tracking under a batch (warranty workflow)                   | P4       |
+| Shopify token rotation runbook                                        | P3       |
+| Sew-line capacity planning + machine assignment                       | P3       |

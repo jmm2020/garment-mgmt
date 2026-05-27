@@ -1,6 +1,6 @@
 {
-  "id": "a8e1bb52-7b8e-4f2e-9a91-5f6b1c8d4e3a",
-  "prevId": "87d7023e-d909-4dde-87bc-c54309296f25",
+  "id": "10d7d5cf-4b55-4b7b-8d07-a90aa7190d67",
+  "prevId": "a8e1bb52-7b8e-4f2e-9a91-5f6b1c8d4e3a",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1346,6 +1346,12 @@
           "primaryKey": false,
           "notNull": true,
           "default": "now()"
+        },
+        "shopify_variant_gid": {
+          "name": "shopify_variant_gid",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {
@@ -2592,6 +2598,12 @@
         },
         "shopify_pushed_at": {
           "name": "shopify_pushed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "shopify_batch_metafield_at": {
+          "name": "shopify_batch_metafield_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false

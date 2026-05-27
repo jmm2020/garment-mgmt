@@ -1,5 +1,5 @@
 import { schema, type Database, type DbExecutor } from "@garment-mgmt/db";
-import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray } from "drizzle-orm";
 import { NotFoundError, ValidationFailedError } from "../errors.js";
 
 type ProductionBatch = schema.ProductionBatch;
@@ -48,7 +48,7 @@ export async function listBatches(
       .where(eq(schema.productVariants.sku, filter.sku));
     if (variantIds.length === 0) return [];
     conditions.push(
-      sql`${schema.productionBatches.productVariantId} IN ${variantIds.map((v) => v.id)}`,
+      inArray(schema.productionBatches.productVariantId, variantIds.map((v) => v.id)),
     );
   }
   const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -84,6 +84,47 @@ export async function recordShopifyFailure(
   await db.insert(schema.productionEvents).values({
     batchId,
     eventType: "shopify_push_failed",
+    payload,
+  });
+}
+
+export async function cacheVariantGid(
+  db: DbExecutor,
+  variantId: number,
+  gid: string,
+): Promise<void> {
+  // No production_event row — the GID is captured in the adjacent shopify_batch_metafield_set payload.
+  await db
+    .update(schema.productVariants)
+    .set({ shopifyVariantGid: gid, updatedAt: new Date() })
+    .where(eq(schema.productVariants.id, variantId));
+}
+
+export async function markBatchMetafieldWritten(
+  db: DbExecutor,
+  batchId: number,
+  writtenAt: Date,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  await db
+    .update(schema.productionBatches)
+    .set({ shopifyBatchMetafieldAt: writtenAt, updatedAt: new Date() })
+    .where(eq(schema.productionBatches.id, batchId));
+  await db.insert(schema.productionEvents).values({
+    batchId,
+    eventType: "shopify_batch_metafield_set",
+    payload,
+  });
+}
+
+export async function recordBatchMetafieldFailure(
+  db: DbExecutor,
+  batchId: number,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  await db.insert(schema.productionEvents).values({
+    batchId,
+    eventType: "shopify_batch_metafield_failed",
     payload,
   });
 }
