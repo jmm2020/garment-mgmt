@@ -13,7 +13,7 @@ trap 'rm -f "$JAR"' EXIT
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
 
 gm() {
-  (cd "$REPO_ROOT" && pnpm --silent --filter @garment-mgmt/cli start -- "$@")
+  (cd "$REPO_ROOT/packages/cli" && pnpm --silent exec tsx src/index.ts "$@")
 }
 # post/get/JAR are used only in step 2 to verify the HTTP API is reachable;
 # the main flow drives the server through the gm CLI session.
@@ -46,7 +46,7 @@ echo "  user=$USER_ID var=$VAR_ID marker=$MK_ID prod_ct=$PROD_CT_ID pvt_ct=$PVT_
 echo "[e2e-batches] 2/8 login"
 GM_PASSWORD="$ADMIN_PASSWORD" gm login "$ADMIN_EMAIL" --host "$HOST"
 post "/auth/login" "{\"email\":\"$ADMIN_EMAIL\",\"password\":\"$ADMIN_PASSWORD\"}" > /dev/null
-ME=$(get "/auth/me" | jq -e -r '.email')
+ME=$(get "/auth/me" | jq -e -r '.user.email')
 echo "  http-session: $ME"
 echo "  logged in as $ADMIN_EMAIL"
 

@@ -29,7 +29,8 @@ export function saveSession(s: Session): void {
 export async function request(method: string, path: string, body?: unknown): Promise<unknown> {
   const session = loadSession();
   const host = session?.host ?? DEFAULT_HOST;
-  const headers: Record<string, string> = { "content-type": "application/json" };
+  const headers: Record<string, string> = {};
+  if (body !== undefined) headers["content-type"] = "application/json";
   if (session?.cookie) headers.cookie = session.cookie;
 
   const res = await fetch(`${host}${path}`, {
