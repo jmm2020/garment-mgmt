@@ -1,6 +1,6 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { schema, type Database } from "@garment-mgmt/db";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import {
   cacheVariantGid,
   markBatchMetafieldWritten,
@@ -63,10 +63,13 @@ export async function pushPendingOnce(
     .where(
       and(
         eq(schema.productionBatches.status, "completed"),
-        sql`(${schema.productionBatches.shopifyPushedAt} IS NULL OR ${schema.productionBatches.shopifyBatchMetafieldAt} IS NULL)`,
+        or(
+          isNull(schema.productionBatches.shopifyPushedAt),
+          isNull(schema.productionBatches.shopifyBatchMetafieldAt),
+        ),
       ),
     )
-    .orderBy(sql`${schema.productionBatches.completedAt} ASC`);
+    .orderBy(schema.productionBatches.completedAt);
 
   let pushed = 0;
   let failed = 0;
@@ -84,14 +87,18 @@ export async function pushPendingOnce(
         failed++;
         continue;
       }
-      const delta = Number(row.qtyActual ?? "0");
+      // Shopify inventory counts are whole-unit integers; qtyActual is numeric(12,4)
+      // rounded here intentionally — fractional garment quantities are not expected.
+      const delta = Math.round(Number(row.qtyActual ?? "0"));
       const result = await inventoryAdjustQuantities(cfg, row.sku, delta);
       if (result.ok) {
-        await markShopifyPushed(db, row.id, new Date(), {
-          sku: row.sku,
-          delta,
-          attempts: result.attempts,
-          testMode: result.testMode,
+        await db.transaction(async (tx) => {
+          await markShopifyPushed(tx, row.id, new Date(), {
+            sku: row.sku,
+            delta,
+            attempts: result.attempts,
+            testMode: result.testMode,
+          });
         });
         pushed++;
         inventoryOk = true;
@@ -136,11 +143,13 @@ export async function pushPendingOnce(
 
     const mf = await setVariantMetafield(cfg, variantGid, row.batchNo);
     if (mf.ok) {
-      await markBatchMetafieldWritten(db, row.id, new Date(), {
-        batchNo: row.batchNo,
-        variantGid,
-        attempts: mf.attempts,
-        testMode: mf.testMode,
+      await db.transaction(async (tx) => {
+        await markBatchMetafieldWritten(tx, row.id, new Date(), {
+          batchNo: row.batchNo,
+          variantGid,
+          attempts: mf.attempts,
+          testMode: mf.testMode,
+        });
       });
       metafieldSet++;
     } else {

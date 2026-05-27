@@ -139,23 +139,18 @@ Errors are emitted by the central handler with stable shape:
 
 `.env.example` is the source of truth. Required:
 
-| Variable              | Purpose                                                   |
-| --------------------- | --------------------------------------------------------- |
-| `DATABASE_URL`        | Postgres connection string                                |
-| `TEST_DATABASE_URL`   | Separate DB for the test harness (`withTestDb`)           |
-| `PORT`                | Server bind port (default `3000`)                         |
-| `SESSION_SECRET`      | HMAC secret for session tokens — **rotate to ≥ 32 chars** |
-| `NODE_ENV`            | `development` / `test` / `production`                     |
-| `SEED_ADMIN_EMAIL`    | Email used by `pnpm seed`                                 |
-| `SEED_ADMIN_PASSWORD` | Password used by `pnpm seed`                              |
-
-**Iteration 2 adds** (will land with ADR-0005):
-
-| Variable              | Purpose                                      |
-| --------------------- | -------------------------------------------- |
-| `SHOPIFY_SHOP_DOMAIN` | `your-shop.myshopify.com`                    |
-| `SHOPIFY_ADMIN_TOKEN` | Custom-app Admin API access token            |
-| `SHOPIFY_LOCATION_ID` | Shopify location to adjust inventory against |
+| Variable              | Purpose                                                                                                                                    |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `DATABASE_URL`        | Postgres connection string                                                                                                                 |
+| `TEST_DATABASE_URL`   | Separate DB for the test harness (`withTestDb`)                                                                                            |
+| `PORT`                | Server bind port (default `3000`)                                                                                                          |
+| `SESSION_SECRET`      | HMAC secret for session tokens — **rotate to ≥ 32 chars**                                                                                 |
+| `NODE_ENV`            | `development` / `test` / `production`                                                                                                     |
+| `SEED_ADMIN_EMAIL`    | Email used by `pnpm seed`                                                                                                                  |
+| `SEED_ADMIN_PASSWORD` | Password used by `pnpm seed`                                                                                                               |
+| `SHOPIFY_SHOP_DOMAIN` | `your-shop.myshopify.com`                                                                                                                  |
+| `SHOPIFY_ADMIN_TOKEN` | Custom-app Admin API access token. Required scopes: `write_inventory`, `read_inventory`, `read_products`, `read_locations`, `write_metafields` |
+| `SHOPIFY_LOCATION_ID` | Shopify location to adjust inventory against                                                                                               |
 
 ## Testing
 
@@ -175,8 +170,9 @@ The `withTestDb(cb)` helper (`packages/server/test/helpers/test-db.ts`) wraps ea
 2. [Drizzle over Prisma](docs/adr/0002-drizzle-over-prisma.md)
 3. [Lot tracking + provenance ledger](docs/adr/0003-lot-and-provenance-model.md)
 4. [BOM versioning + cut-ticket flow](docs/adr/0004-bom-versioning-cut-ticket-flow.md)
-5. [Production tracking + Shopify FG inventory](docs/adr/0005-production-tracking-and-shopify-fg.md) — _coming with iter 2_
+5. [Production tracking + Shopify FG inventory](docs/adr/0005-production-tracking-and-shopify-fg.md)
 6. [InvenTree for raw-material tracking (replaces Cin7)](docs/adr/0006-inventree-for-raw-materials.md)
+7. [Shopify batch_id variant metafield](docs/adr/0007-shopify-batch-id-metafield.md)
 
 ## Roadmap
 

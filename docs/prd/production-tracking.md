@@ -219,7 +219,7 @@ A passed PVT is the **permanent forensic record** of the pre-production check th
 - Multi-cutter batches (one batch = one cutter for now)
 - Splitting a batch mid-flow (one path, no fork/merge)
 - Re-opening a `completed` batch (write a `cancelled` batch and a new one instead)
-- Shopify metafield with batch ID on order lines (ADR-0005 open question #2)
+- Order-line-level Shopify metafield with batch ID (requires Shopify webhook subscription, HMAC middleware, per-line FIFO assignment; deferred to iter 3+). Variant-level `garment_mgmt/last_batch_no` is resolved — see ADR-0007.
 - A `gm batch find --customer <order-id>` reverse-lookup (needs Shopify webhook integration; iter 3)
 - InvenTree raw-material sync (ADR-0006; Hub → InvenTree push lands in a follow-up issue)
 

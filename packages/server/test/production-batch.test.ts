@@ -1,10 +1,13 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { NotFoundError } from "../src/errors.js";
 import { pushPendingOnce } from "../src/jobs/shopify-inventory-push.js";
+import { schema } from "@garment-mgmt/db";
+import { eq } from "drizzle-orm";
 import {
   getBatch,
   loadBatch,
   markShopifyPushed,
+  recordBatchMetafieldFailure,
 } from "../src/services/production-batch-queries.js";
 import {
   completeBatch,
@@ -73,6 +76,13 @@ describe("production batch — happy path", () => {
       const afterPush = await loadBatch(db, completed.id);
       expect(afterPush.shopifyPushedAt).not.toBeNull();
       expect(afterPush.shopifyBatchMetafieldAt).not.toBeNull();
+
+      const variant = await db
+        .select({ shopifyVariantGid: schema.productVariants.shopifyVariantGid })
+        .from(schema.productVariants)
+        .where(eq(schema.productVariants.id, fx.variantId))
+        .then((rows) => rows[0]);
+      expect(variant?.shopifyVariantGid).toBe("gid://shopify/ProductVariant/0");
     });
   });
 
@@ -195,6 +205,35 @@ describe("production batch — forensic lookup", () => {
 
       const afterPush = await loadBatch(db, batch.id);
       expect(afterPush.shopifyBatchMetafieldAt).not.toBeNull();
+    });
+  });
+
+  it("recordBatchMetafieldFailure inserts shopify_batch_metafield_failed and leaves batch retryable", async () => {
+    await withTestDb(async (db) => {
+      const fx = await seedProductionFixture(db);
+      await seedValidatedPvt(db, fx);
+      const batch = await receiveFromCutter(db, {
+        cutTicketId: fx.productionCutTicketId,
+        productVariantId: fx.variantId,
+        qtyPlanned: "5",
+        cutterUserId: fx.userId,
+      });
+      await stageForProduction(db, batch.id, fx.userId);
+      await startProduction(db, batch.id, fx.userId);
+      await submitForQc(db, { ref: batch.id, qty: "5", actorUserId: fx.userId });
+      await completeBatch(db, { ref: batch.id, qty: "5", verdict: "pass", actorUserId: fx.userId });
+
+      await recordBatchMetafieldFailure(db, batch.id, {
+        batchNo: batch.batchNo,
+        sku: fx.variantSku,
+        error: "variant not found in Shopify",
+      });
+
+      const detail = await getBatch(db, batch.id);
+      expect(detail.events.some((e) => e.eventType === "shopify_batch_metafield_failed")).toBe(true);
+
+      const loaded = await loadBatch(db, batch.id);
+      expect(loaded.shopifyBatchMetafieldAt).toBeNull();
     });
   });
 

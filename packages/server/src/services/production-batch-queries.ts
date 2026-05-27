@@ -93,6 +93,7 @@ export async function cacheVariantGid(
   variantId: number,
   gid: string,
 ): Promise<void> {
+  // No production_event row — the GID is captured in the adjacent shopify_batch_metafield_set payload.
   await db
     .update(schema.productVariants)
     .set({ shopifyVariantGid: gid, updatedAt: new Date() })

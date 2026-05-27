@@ -125,6 +125,8 @@ Push job (idempotent):
 
 The batch is `completed` in our system whether or not Shopify is reachable. Reconciliation reads `WHERE status = 'completed' AND shopify_pushed_at IS NULL`.
 
+> **Updated (ADR-0007, 2026-05-27)**: The push job was extended to a two-phase sweep. Phase 1 is the inventory adjust described above. Phase 2 writes `garment_mgmt/last_batch_no` on the Shopify product variant. The SELECT broadens to `shopify_pushed_at IS NULL OR shopify_batch_metafield_at IS NULL`. See ADR-0007 for the full retry semantics and new schema columns.
+
 ### 6. Required env vars
 
 | Variable              | Purpose                                         |

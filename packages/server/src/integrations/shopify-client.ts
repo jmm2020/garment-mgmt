@@ -176,11 +176,17 @@ export async function lookupShopifyVariantGid(
         },
         body: JSON.stringify({ query, variables }),
       });
-      const body = (await res.json().catch(() => ({}))) as {
+      let jsonParseOk1 = true;
+      const body = (await res.json().catch(() => {
+        jsonParseOk1 = false;
+        return {};
+      })) as {
         data?: { productVariants?: { nodes?: { id?: string }[] } };
         errors?: { message: string }[];
       };
-      if (res.ok && (!body.errors || body.errors.length === 0)) {
+      if (!jsonParseOk1) {
+        lastError = `HTTP ${res.status} (non-JSON response)`;
+      } else if (res.ok && (!body.errors || body.errors.length === 0)) {
         const gid = body.data?.productVariants?.nodes?.[0]?.id;
         if (!gid) {
           return {
@@ -192,8 +198,9 @@ export async function lookupShopifyVariantGid(
           };
         }
         return { ok: true, attempts: attempt, testMode: false, sku, gid };
+      } else {
+        lastError = body.errors?.[0]?.message ?? `HTTP ${res.status}`;
       }
-      lastError = body.errors?.[0]?.message ?? `HTTP ${res.status}`;
     } catch (err) {
       lastError = err instanceof Error ? err.message : String(err);
     }
@@ -275,7 +282,11 @@ export async function setVariantMetafield(
         },
         body: JSON.stringify({ query, variables }),
       });
-      const body = (await res.json().catch(() => ({}))) as {
+      let jsonParseOk2 = true;
+      const body = (await res.json().catch(() => {
+        jsonParseOk2 = false;
+        return {};
+      })) as {
         data?: {
           metafieldsSet?: {
             metafields?: { id?: string }[];
@@ -284,12 +295,22 @@ export async function setVariantMetafield(
         };
         errors?: { message: string }[];
       };
-      if (res.ok && (!body.errors || body.errors.length === 0)) {
+      if (!jsonParseOk2) {
+        lastError = `HTTP ${res.status} (non-JSON response)`;
+      } else if (res.ok && (!body.errors || body.errors.length === 0)) {
         const userErrors = body.data?.metafieldsSet?.userErrors ?? [];
         if (userErrors.length === 0) {
           return { ok: true, attempts: attempt, testMode: false, variantGid, batchNo };
         }
-        lastError = userErrors[0]?.message ?? "metafieldsSet userError";
+        // userErrors are deterministic validation failures — do not retry
+        return {
+          ok: false,
+          attempts: attempt,
+          testMode: false,
+          variantGid,
+          batchNo,
+          error: userErrors[0]?.message ?? "metafieldsSet userError",
+        };
       } else {
         lastError = body.errors?.[0]?.message ?? `HTTP ${res.status}`;
       }
