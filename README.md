@@ -51,6 +51,27 @@ pnpm cli vendors list
 pnpm cli lot provenance 1
 ```
 
+### `gm batch` end-to-end test
+
+Tests the full PVT + production-batch CLI flow against a running server, satisfying
+PRD acceptance criterion #6 for iteration 2.
+
+**Prerequisites:**
+
+- `pnpm dev` running in a separate terminal (starts the server + the Shopify push job)
+- `DATABASE_URL` set (defaults to `postgres://dev:dev@localhost:5432/garment_mgmt`)
+- `pnpm seed` run at least once (creates the admin user the test logs in as)
+- `jq` installed (`apt install jq` / `brew install jq`)
+
+```bash
+bash packages/server/test/e2e-batches.sh
+```
+
+The script seeds its own fixtures (product, variant, marker, BOM, production +
+PVT cut tickets) at each run via `packages/server/test/helpers/seed-e2e-batches.ts`,
+so no manual setup beyond `pnpm seed` is needed. Each invocation creates a fresh
+uniquely-tagged fixture set — safe to run multiple times.
+
 ## Repository layout
 
 ```
