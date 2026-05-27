@@ -10,6 +10,7 @@ import {
   startProduction,
   submitForQc,
 } from "../services/production-batch-service.js";
+import { findBatchesByOrder } from "../services/shopify-webhook-service.js";
 
 const createBody = z.object({
   cutTicketId: z.number().int().positive(),
@@ -56,6 +57,14 @@ export async function registerBatchRoutes(app: FastifyInstance): Promise<void> {
   app.get("/", async (req) => {
     const q = listQuery.parse(req.query ?? {});
     return listBatches(req.db, q);
+  });
+
+  // Registered before /:ref so Fastify routes "by-order" as a static path instead of
+  // a :ref param value (it would in any case under v5, but explicit ordering reads
+  // clearer for the next maintainer).
+  app.get("/by-order", async (req) => {
+    const q = z.object({ order: z.string().min(1) }).parse(req.query ?? {});
+    return findBatchesByOrder(req.db, q.order);
   });
 
   app.get("/:ref", async (req) => {

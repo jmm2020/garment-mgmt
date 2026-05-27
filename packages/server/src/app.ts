@@ -15,6 +15,7 @@ import { registerPoRoutes } from "./routes/pos.js";
 import { registerProductRoutes } from "./routes/products.js";
 import { registerPvtRoutes, registerPvtStatusRoute } from "./routes/pvt.js";
 import { registerVendorRoutes } from "./routes/vendors.js";
+import { registerWebhookRoutes } from "./routes/webhooks.js";
 
 declare module "fastify" {
   interface FastifyRequest {
@@ -96,6 +97,7 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   await app.register(registerCutTicketRoutes, { prefix: "/api/cut-tickets" });
   await app.register(registerBatchRoutes, { prefix: "/api/batches" });
   await app.register(registerPvtRoutes, { prefix: "/api/pvt" });
+  await app.register(registerWebhookRoutes, { prefix: "/webhooks/shopify" });
 
   return app;
 }
