@@ -34,16 +34,16 @@ We adopt a **three-tier hybrid stack** with clear ownership boundaries:
 | Production Hub (this repo) | Apparel manufacturing data: vendors, materials, PO/receiving, lots, BOMs, cut tickets, remnants, provenance | We own  |
 
 The Production Hub is the system of record for everything Shopify and
-Cin7 cannot model. Finished-good SKUs (`product_variants.fg_sku`) are
-the integration seam — they become the join key for future Shopify and
-Cin7 sync.
+Cin7 *(superseded — see ADR-0006)* cannot model. Finished-good SKUs
+(`product_variants.fg_sku`) are the integration seam — they become the
+join key for future Shopify and InvenTree sync.
 
 ## Consequences
 
 **Positive**:
 
 - We only build what is uniquely ours (the apparel data model).
-- Shopify and Cin7 keep handling storefront/warehouse — no NIH risk.
+- Shopify and Cin7 *(superseded)* keep handling storefront/warehouse — no NIH risk.
 - Integration is deferred to iteration 3+, after the model is validated
   by the operator via CLI.
 
@@ -52,7 +52,7 @@ Cin7 sync.
 - We carry the integration burden eventually (two sync pipelines).
 - Data lives in three places; reconciliation logic is required.
 - The FG-SKU seam must stay stable; renaming it later costs migrations
-  on the Cin7 / Shopify sides.
+  on the Cin7 *(superseded)* / Shopify sides.
 
 **Mitigations**:
 

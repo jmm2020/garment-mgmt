@@ -1,7 +1,7 @@
 # ADR 0006: InvenTree for Raw-Material Tracking (replaces Cin7 Core)
 
 **Status**: Accepted (2026-05-27)
-**Supersedes**: ADR-0005 (open question #1 — Cin7's residual role in the stack)
+**Addresses**: ADR-0005 open question #1 — Cin7's residual role in the stack
 
 ## Context
 
@@ -9,7 +9,7 @@ ADR-0001 placed raw-material stock management in **Cin7 Core**. ADR-0005 later n
 
 On 2026-05-27 the operator resolved the question: **Cin7 Core is too expensive at current scale.** The annual subscription cost exceeds the value of the raw-material tracking it provides for a single-location, ~$2.5M boutique operation.
 
-Three alternatives were evaluated:
+Options evaluated:
 
 | Option | Verdict | Reason |
 | ------ | ------- | ------ |
