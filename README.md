@@ -4,7 +4,7 @@
 
 ```
    ┌──────────┐   ┌────────────────────┐   ┌─────────────┐
-   │ Shopify  │   │ Production Hub     │   │ Cin7 Core   │
+   │ Shopify  │   │ Production Hub     │   │ InvenTree   │
    │ (store)  │   │ (this repo)        │   │ (raw mats)  │
    └──────────┘   └────────────────────┘   └─────────────┘
                        owns:
@@ -15,7 +15,7 @@
                        - remnants, provenance, audit
 ```
 
-> **Note on FG inventory:** ADR-0001 originally placed finished-goods inventory in Cin7. Iteration 2 supersedes that — Shopify becomes the FG source of truth. See ADR-0005 (landing with the production-tracking PR).
+> **Note on FG inventory:** ADR-0001 originally placed finished-goods inventory in Cin7. Iteration 2 supersedes that — Shopify becomes the FG source of truth. See ADR-0005. Raw-material tracking moved from Cin7 Core to InvenTree (self-hosted, MIT-licensed) — see ADR-0006.
 
 Iteration 1 ships a typed Fastify HTTP API + a Commander-based operator CLI (`gm`) that walks the full demo flow end-to-end. No UI yet.
 
@@ -50,27 +50,6 @@ pnpm cli login admin@example.com --password dev
 pnpm cli vendors list
 pnpm cli lot provenance 1
 ```
-
-### `gm batch` end-to-end test
-
-Tests the full PVT + production-batch CLI flow against a running server, satisfying
-PRD acceptance criterion #6 for iteration 2.
-
-**Prerequisites:**
-
-- `pnpm dev` running in a separate terminal (starts the server + the Shopify push job)
-- `DATABASE_URL` set (defaults to `postgres://dev:dev@localhost:5432/garment_mgmt`)
-- `pnpm seed` run at least once (creates the admin user the test logs in as)
-- `jq` installed (`apt install jq` / `brew install jq`)
-
-```bash
-bash packages/server/test/e2e-batches.sh
-```
-
-The script seeds its own fixtures (product, variant, marker, BOM, production +
-PVT cut tickets) at each run via `packages/server/test/helpers/seed-e2e-batches.ts`,
-so no manual setup beyond `pnpm seed` is needed. Each invocation creates a fresh
-uniquely-tagged fixture set — safe to run multiple times.
 
 ## Repository layout
 
@@ -117,36 +96,36 @@ scripts/      One-time setup (e.g., init-test-db.sql)
 
 Session is persisted to `~/.garment-mgmt/session` after login.
 
-| Command                            | Notes                                        |
-| ---------------------------------- | -------------------------------------------- |
-| `gm login <email> --password <pw>` | Authenticate; writes session token           |
-| `gm logout`                        | Drop session                                 |
-| `gm vendors list`                  | List vendors                                 |
-| `gm materials list`                | List materials                               |
-| `gm po list`                       | List purchase orders                         |
-| `gm po show <id>`                  | PO with lines                                |
-| `gm po receive <lineId>`           | Receive lots — stdin: `{"lots":[...]}`       |
-| `gm bom show <id>`                 | BOM with components                          |
-| `gm ct list`                       | List cut tickets                             |
-| `gm ct create`                     | Create cut ticket — stdin: JSON body         |
-| `gm ct show <id>`                  | Cut ticket with allocations                  |
-| `gm ct close <id>`                 | Close ticket — stdin: `{"actuals":[...]}`    |
-| `gm lot provenance <id>`           | Walk lot → PO line → PO → vendor + movements |
+| Command                              | Notes                                          |
+| ------------------------------------ | ---------------------------------------------- |
+| `gm login <email> --password <pw>`   | Authenticate; writes session token             |
+| `gm logout`                          | Drop session                                   |
+| `gm vendors list`                    | List vendors                                   |
+| `gm materials list`                  | List materials                                 |
+| `gm po list`                         | List purchase orders                           |
+| `gm po show <id>`                    | PO with lines                                  |
+| `gm po receive <lineId>`             | Receive lots — stdin: `{"lots":[...]}`         |
+| `gm bom show <id>`                   | BOM with components                            |
+| `gm ct list`                         | List cut tickets                               |
+| `gm ct create`                       | Create cut ticket — stdin: JSON body           |
+| `gm ct show <id>`                    | Cut ticket with allocations                    |
+| `gm ct close <id>`                   | Close ticket — stdin: `{"actuals":[...]}`      |
+| `gm lot provenance <id>`             | Walk lot → PO line → PO → vendor + movements   |
 
 ## HTTP API
 
 Mounted under `/` from `packages/server/src/routes/`. All mutating endpoints require an active session cookie / bearer (set by `POST /auth/login`).
 
-| Resource      | Routes                                                                               |
-| ------------- | ------------------------------------------------------------------------------------ |
-| `auth`        | `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`                              |
-| `vendors`     | `GET/POST /vendors`, `GET /vendors/:id`                                              |
-| `materials`   | `GET/POST /materials`, `GET /materials/:id`, `POST /materials/:id/variants`          |
-| `products`    | `GET/POST /products`, `GET /products/:id`, `POST /products/:id/variants`             |
-| `pos` (POs)   | `GET/POST /pos`, `GET /pos/:id`, `POST /pos/:id/send`, `POST /pos/:id/confirm`       |
-| `lots`        | `GET /lots/:id`, `GET /lots/:id/provenance`, `POST /pos/:lineId/receive`             |
-| `boms`        | `GET/POST /boms`, `POST /boms/:id/approve`, `POST /boms/:id/activate`                |
-| `cut-tickets` | `GET/POST /cut-tickets`, `POST /cut-tickets/:id/mark-cutting`, `…/close`, `…/cancel` |
+| Resource         | Routes                                                                                 |
+| ---------------- | -------------------------------------------------------------------------------------- |
+| `auth`           | `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`                                |
+| `vendors`        | `GET/POST /vendors`, `GET /vendors/:id`                                                |
+| `materials`      | `GET/POST /materials`, `GET /materials/:id`, `POST /materials/:id/variants`            |
+| `products`       | `GET/POST /products`, `GET /products/:id`, `POST /products/:id/variants`               |
+| `pos` (POs)      | `GET/POST /pos`, `GET /pos/:id`, `POST /pos/:id/send`, `POST /pos/:id/confirm`         |
+| `lots`           | `GET /lots/:id`, `GET /lots/:id/provenance`, `POST /pos/:lineId/receive`               |
+| `boms`           | `GET/POST /boms`, `POST /boms/:id/approve`, `POST /boms/:id/activate`                  |
+| `cut-tickets`    | `GET/POST /cut-tickets`, `POST /cut-tickets/:id/mark-cutting`, `…/close`, `…/cancel`   |
 
 Errors are emitted by the central handler with stable shape:
 
@@ -160,23 +139,23 @@ Errors are emitted by the central handler with stable shape:
 
 `.env.example` is the source of truth. Required:
 
-| Variable              | Purpose                                                   |
-| --------------------- | --------------------------------------------------------- |
-| `DATABASE_URL`        | Postgres connection string                                |
-| `TEST_DATABASE_URL`   | Separate DB for the test harness (`withTestDb`)           |
-| `PORT`                | Server bind port (default `3000`)                         |
-| `SESSION_SECRET`      | HMAC secret for session tokens — **rotate to ≥ 32 chars** |
-| `NODE_ENV`            | `development` / `test` / `production`                     |
-| `SEED_ADMIN_EMAIL`    | Email used by `pnpm seed`                                 |
-| `SEED_ADMIN_PASSWORD` | Password used by `pnpm seed`                              |
+| Variable                | Purpose                                                       |
+| ----------------------- | ------------------------------------------------------------- |
+| `DATABASE_URL`          | Postgres connection string                                    |
+| `TEST_DATABASE_URL`     | Separate DB for the test harness (`withTestDb`)               |
+| `PORT`                  | Server bind port (default `3000`)                             |
+| `SESSION_SECRET`        | HMAC secret for session tokens — **rotate to ≥ 32 chars**     |
+| `NODE_ENV`              | `development` / `test` / `production`                         |
+| `SEED_ADMIN_EMAIL`      | Email used by `pnpm seed`                                     |
+| `SEED_ADMIN_PASSWORD`   | Password used by `pnpm seed`                                  |
 
 **Iteration 2 adds** (will land with ADR-0005):
 
-| Variable              | Purpose                                      |
-| --------------------- | -------------------------------------------- |
-| `SHOPIFY_SHOP_DOMAIN` | `your-shop.myshopify.com`                    |
-| `SHOPIFY_ADMIN_TOKEN` | Custom-app Admin API access token            |
-| `SHOPIFY_LOCATION_ID` | Shopify location to adjust inventory against |
+| Variable                | Purpose                                                       |
+| ----------------------- | ------------------------------------------------------------- |
+| `SHOPIFY_SHOP_DOMAIN`   | `your-shop.myshopify.com`                                     |
+| `SHOPIFY_ADMIN_TOKEN`   | Custom-app Admin API access token                             |
+| `SHOPIFY_LOCATION_ID`   | Shopify location to adjust inventory against                  |
 
 ## Testing
 
@@ -192,20 +171,21 @@ The `withTestDb(cb)` helper (`packages/server/test/helpers/test-db.ts`) wraps ea
 
 ## Architecture decisions
 
-1. [Hybrid architecture (Shopify + Cin7 + Hub)](docs/adr/0001-hybrid-architecture.md) — _FG portion superseded by ADR-0005 in iter 2_
+1. [Hybrid architecture (Shopify + Cin7 + Hub)](docs/adr/0001-hybrid-architecture.md) — *Cin7 row superseded by ADR-0006; FG portion superseded by ADR-0005*
 2. [Drizzle over Prisma](docs/adr/0002-drizzle-over-prisma.md)
 3. [Lot tracking + provenance ledger](docs/adr/0003-lot-and-provenance-model.md)
 4. [BOM versioning + cut-ticket flow](docs/adr/0004-bom-versioning-cut-ticket-flow.md)
-5. [Production tracking + Shopify FG inventory](docs/adr/0005-production-tracking-and-shopify-fg.md) — _coming with iter 2_
+5. [Production tracking + Shopify FG inventory](docs/adr/0005-production-tracking-and-shopify-fg.md) — *coming with iter 2*
+6. [InvenTree for raw-material tracking (replaces Cin7)](docs/adr/0006-inventree-for-raw-materials.md)
 
 ## Roadmap
 
-| Iteration | Scope                                                                                        |
-| --------- | -------------------------------------------------------------------------------------------- |
-| **1**     | Data layer, services, REST API, CLI, lot provenance, cut-ticket flow (cut-only)              |
-| **2**     | Production batches (PB-YYYY-####), station tracking, structured SKUs, Shopify inventory push |
-| **3**     | React UI, real-time push (WS/SSE), sew/QC/finish/pack workflow                               |
-| **4+**    | CSV export, multi-facility, native mobile, SAM-based costing                                 |
+| Iteration | Scope                                                                                           |
+| --------- | ----------------------------------------------------------------------------------------------- |
+| **1**     | Data layer, services, REST API, CLI, lot provenance, cut-ticket flow (cut-only)                 |
+| **2**     | Production batches (PB-YYYY-####), station tracking, structured SKUs, Shopify inventory push    |
+| **3**     | React UI, real-time push (WS/SSE), sew/QC/finish/pack workflow                                  |
+| **4+**    | CSV export, multi-facility, native mobile, SAM-based costing                                    |
 
 ## Out of scope (iteration 1)
 

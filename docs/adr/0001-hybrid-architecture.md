@@ -30,7 +30,7 @@ We adopt a **three-tier hybrid stack** with clear ownership boundaries:
 | Layer                      | Responsibility                                                                                              | Owner   |
 | -------------------------- | ----------------------------------------------------------------------------------------------------------- | ------- |
 | Shopify                    | Storefront, online sales, payments                                                                          | Shopify |
-| Cin7 Core                  | FG warehouse stock, sales orders, shipping                                                                  | Cin7    |
+| ~~Cin7 Core~~              | ~~FG warehouse stock, sales orders, shipping~~ — *superseded: FG → Shopify (ADR-0005); raw materials → InvenTree (ADR-0006)* | —       |
 | Production Hub (this repo) | Apparel manufacturing data: vendors, materials, PO/receiving, lots, BOMs, cut tickets, remnants, provenance | We own  |
 
 The Production Hub is the system of record for everything Shopify and
@@ -60,3 +60,12 @@ Cin7 sync.
   from day one.
 - Provenance ledger (`audit_log` + `lot_movements`) is append-only —
   the Hub remains the truth source even if a sync goes wrong.
+
+## Note (2026-05-27)
+
+The Cin7 row in the table above has been superseded in two steps:
+
+- **FG inventory** moved to Shopify as source of truth — see ADR-0005.
+- **Raw-material tracking** moved to InvenTree (open-source, self-hosted) — see ADR-0006.
+
+The three-tier shape of the stack is preserved; only the occupant of the middle layer changed.
