@@ -11,12 +11,12 @@ On 2026-05-27 the operator resolved the question: **Cin7 Core is too expensive a
 
 Options evaluated:
 
-| Option | Verdict | Reason |
-| ------ | ------- | ------ |
-| **Cin7 Core** (status quo) | Rejected | Cost-prohibitive at current scale; monthly seat cost is not justified |
-| **ERPNext** | Rejected | Heavier than needed; significant setup/maintenance overhead for one facility |
-| **Absorb into Production Hub** | Rejected | Contradicts ADR-0001's "only build what is uniquely ours" principle; re-implements a solved problem (warehouse stock) |
-| **InvenTree** | **Accepted** | MIT-licensed, self-hostable via Docker, active development, scope matches exactly: suppliers, stock locations, batch/lot, BOMs, REST API |
+| Option                         | Verdict      | Reason                                                                                                                                   |
+| ------------------------------ | ------------ | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cin7 Core** (status quo)     | Rejected     | Cost-prohibitive at current scale; monthly seat cost is not justified                                                                    |
+| **ERPNext**                    | Rejected     | Heavier than needed; significant setup/maintenance overhead for one facility                                                             |
+| **Absorb into Production Hub** | Rejected     | Contradicts ADR-0001's "only build what is uniquely ours" principle; re-implements a solved problem (warehouse stock)                    |
+| **InvenTree**                  | **Accepted** | MIT-licensed, self-hostable via Docker, active development, scope matches exactly: suppliers, stock locations, batch/lot, BOMs, REST API |
 
 InvenTree (https://inventree.org/) handles the commodity warehouse layer that was previously expected of Cin7. It provides supplier management, stock locations, batch/lot tracking, and a REST API — all the primitives the raw-material layer needs, without apparel-specific features that would remain unused.
 
@@ -26,21 +26,23 @@ InvenTree (https://inventree.org/) handles the commodity warehouse layer that wa
 
 The three-tier ownership table from ADR-0001 updates to:
 
-| Layer                      | Responsibility                                                                                              | Owner      |
-| -------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------- |
-| **Shopify**                | Storefront, online sales, payments, FG inventory of record (per ADR-0005)                                   | Shopify    |
-| **InvenTree**              | Raw-material stock-on-hand, supplier records, stock locations, receiving from POs                            | InvenTree  |
-| **Production Hub (this repo)** | Apparel manufacturing data: vendors, materials, POs, material lots, dye-lot integrity, BOMs, cut tickets, production batches | We own |
+| Layer                          | Responsibility                                                                                                               | Owner     |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | --------- |
+| **Shopify**                    | Storefront, online sales, payments, FG inventory of record (per ADR-0005)                                                    | Shopify   |
+| **InvenTree**                  | Raw-material stock-on-hand, supplier records, stock locations, receiving from POs                                            | InvenTree |
+| **Production Hub (this repo)** | Apparel manufacturing data: vendors, materials, POs, material lots, dye-lot integrity, BOMs, cut tickets, production batches | We own    |
 
 ### 2. Ownership boundaries
 
 **InvenTree owns:**
+
 - Stock-on-hand quantity per raw material per location
 - Supplier records (counterpart to our `vendors` table — InvenTree is the warehouse view; Hub is the apparel master)
 - Stock locations (warehouse bin / shelf assignments)
 - Receiving confirmations from purchase orders (stock-in events)
 
 **Production Hub owns — unchanged:**
+
 - `vendors` — master vendor data (name, address, certifications, audit trail)
 - `materials` — material catalog (fiber content, width, weight, dye-lot behavior)
 - `material_lots` — cut-floor traceability: lot number, provenance, dye lot, quantity remaining
@@ -55,9 +57,9 @@ The Production Hub is the **source of truth for the apparel-specific schema**. I
 
 Two events in the Production Hub trigger a push to InvenTree:
 
-| Hub event | InvenTree action |
-| --------- | ---------------- |
-| Material lot received (`receivePoLine`) | `POST /api/stock/` — incoming stock entry |
+| Hub event                                            | InvenTree action                                |
+| ---------------------------------------------------- | ----------------------------------------------- |
+| Material lot received (`receivePoLine`)              | `POST /api/stock/` — incoming stock entry       |
 | Material consumed on cut (`closeCutTicket` lot pick) | `PATCH /api/stock/{id}/` — stock-out adjustment |
 
 Direction is **one-way Hub → InvenTree** for iteration 2. The Hub initiates all pushes; InvenTree is never the source of mutations that the Hub must react to.

@@ -150,15 +150,20 @@ packages/server/src/
     session.ts             ← authenticate(), createSession(), bcrypt guard
     middleware.ts          ← requireAuth, requireRole
   services/
-    audit-service.ts       ← recordAudit + scrub
+    audit-service.ts              ← recordAudit + scrub
     vendor-service.ts
     material-service.ts
-    po-service.ts          ← + recalculatePoStatus
-    lot-service.ts         ← receivePoLine
-    bom-service.ts         ← + activateBom + computeRequirementsFromComponents
-    cut-ticket-service.ts  ← + pickFifo + pickSingleDyeLot (exported pure fns)
+    po-service.ts                 ← + recalculatePoStatus
+    lot-service.ts                ← receivePoLine
+    bom-service.ts                ← + activateBom + computeRequirementsFromComponents
+    cut-ticket-service.ts         ← + pickFifo + pickSingleDyeLot (exported pure fns)
     product-service.ts
-    shopify-webhook-service.ts  ← processOrderWebhook, assignFifoBatches, findBatchesByOrder
+    production-batch-queries.ts   ← read-only batch queries extracted for reuse
+    production-batch-service.ts   ← startProduction, receiveFromCutter, completeBatch
+    production-unit-service.ts    ← mintUnits, recordUnitQcVerdict, getUnit, listBatchUnits
+    pvt-queries.ts                ← read-only PVT queries
+    pvt-service.ts                ← createPvt, markPvtShipped, validatePvt, rejectPvt
+    shopify-webhook-service.ts    ← processOrderWebhook, assignFifoBatches, findBatchesByOrder
   routes/                  ← One file per resource. Routes are Zod-validated thin wrappers.
   routes/webhooks.ts       ← POST /webhooks/orders (Shopify orders/create, HMAC-gated)
   app.ts                   ← buildApp(): env parse → drizzle → routes → setErrorHandler
@@ -213,7 +218,7 @@ packages/server/src/
 
 | Iter | Theme                                            | Status       |
 | ---- | ------------------------------------------------ | ------------ |
-| 1    | Data layer, REST API, CLI, lot/cut foundation    | PR #1 (this) |
-| 2    | Production batches, station tracking, Shopify FG | PR #2 (next) |
+| 1    | Data layer, REST API, CLI, lot/cut foundation    | ✅ Merged (PR #1)         |
+| 2    | Production batches, station tracking, Shopify FG | In progress (PRs #2–#9)  |
 | 3    | React UI, real-time, sew/QC/finish/pack          | future       |
 | 4+   | CSV export, multi-facility, mobile, SAM costing  | future       |

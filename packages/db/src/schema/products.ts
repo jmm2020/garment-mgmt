@@ -61,6 +61,9 @@ export const productVariants = pgTable(
     sku: text("sku"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    // Cached Shopify product variant GID (gid://shopify/ProductVariant/...).
+    // Populated on first successful GID lookup by the push job. NULL until then.
+    shopifyVariantGid: text("shopify_variant_gid"),
   },
   (t) => ({
     productSizeColorIdx: uniqueIndex("product_variants_unique_idx").on(

@@ -165,7 +165,7 @@ Errors are emitted by the central handler with stable shape:
 | Variable                   | Purpose                                                       |
 | -------------------------- | ------------------------------------------------------------- |
 | `SHOPIFY_SHOP_DOMAIN`      | `your-shop.myshopify.com`                                     |
-| `SHOPIFY_ADMIN_TOKEN`      | Custom-app Admin API access token                             |
+| `SHOPIFY_ADMIN_TOKEN`      | Custom-app Admin API access token. Required scopes: `write_inventory`, `read_inventory`, `read_products`, `read_locations`, `write_metafields` |
 | `SHOPIFY_LOCATION_ID`      | Shopify location to adjust inventory against                  |
 
 **Iteration 2 — Shopify inbound webhook** (required for order → batch reverse lookup):
@@ -188,21 +188,22 @@ The `withTestDb(cb)` helper (`packages/server/test/helpers/test-db.ts`) wraps ea
 
 ## Architecture decisions
 
-1. [Hybrid architecture (Shopify + Cin7 + Hub)](docs/adr/0001-hybrid-architecture.md) — *Cin7 row superseded by ADR-0006; FG portion superseded by ADR-0005*
+1. [Hybrid architecture (Shopify + Cin7 + Hub)](docs/adr/0001-hybrid-architecture.md) — _Cin7 row superseded by ADR-0006; FG portion superseded by ADR-0005_
 2. [Drizzle over Prisma](docs/adr/0002-drizzle-over-prisma.md)
 3. [Lot tracking + provenance ledger](docs/adr/0003-lot-and-provenance-model.md)
 4. [BOM versioning + cut-ticket flow](docs/adr/0004-bom-versioning-cut-ticket-flow.md)
-5. [Production tracking + Shopify FG inventory](docs/adr/0005-production-tracking-and-shopify-fg.md) — *coming with iter 2*
+5. [Production tracking + Shopify FG inventory](docs/adr/0005-production-tracking-and-shopify-fg.md)
 6. [InvenTree for raw-material tracking (replaces Cin7)](docs/adr/0006-inventree-for-raw-materials.md)
+7. [Shopify batch_id variant metafield](docs/adr/0007-shopify-batch-id-metafield.md)
 
 ## Roadmap
 
-| Iteration | Scope                                                                                           |
-| --------- | ----------------------------------------------------------------------------------------------- |
-| **1**     | Data layer, services, REST API, CLI, lot provenance, cut-ticket flow (cut-only)                 |
-| **2**     | Production batches (PB-YYYY-####), station tracking, structured SKUs, Shopify inventory push    |
-| **3**     | React UI, real-time push (WS/SSE), sew/QC/finish/pack workflow                                  |
-| **4+**    | CSV export, multi-facility, native mobile, SAM-based costing                                    |
+| Iteration | Scope                                                                                        |
+| --------- | -------------------------------------------------------------------------------------------- |
+| **1**     | Data layer, services, REST API, CLI, lot provenance, cut-ticket flow (cut-only)              |
+| **2**     | Production batches (PB-YYYY-####), station tracking, structured SKUs, Shopify inventory push |
+| **3**     | React UI, real-time push (WS/SSE), sew/QC/finish/pack workflow                               |
+| **4+**    | CSV export, multi-facility, native mobile, SAM-based costing                                 |
 
 ## Out of scope (iteration 1)
 

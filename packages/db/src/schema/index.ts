@@ -11,6 +11,7 @@ export * from "./markers";
 export * from "./cut-tickets";
 export * from "./remnants";
 export * from "./production-batches";
+export * from "./production-units";
 export * from "./production-events";
 export * from "./production-validation-runs";
 export * from "./shopify-order-batches";

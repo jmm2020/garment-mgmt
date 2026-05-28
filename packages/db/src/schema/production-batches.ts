@@ -68,6 +68,10 @@ export const productionBatches = pgTable(
     cancelReason: text("cancel_reason"),
     // Idempotency marker for Shopify push. NULL until the background job successfully posts.
     shopifyPushedAt: timestamp("shopify_pushed_at", { withTimezone: true }),
+    // Idempotency marker for variant metafield write. NULL until push job successfully
+    // calls metafieldsSet. Separate from shopify_pushed_at so a partial failure
+    // (inventory ok, metafield failed) is retried on the next tick.
+    shopifyBatchMetafieldAt: timestamp("shopify_batch_metafield_at", { withTimezone: true }),
     notes: text("notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),

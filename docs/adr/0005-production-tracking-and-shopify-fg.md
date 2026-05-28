@@ -125,6 +125,8 @@ Push job (idempotent):
 
 The batch is `completed` in our system whether or not Shopify is reachable. Reconciliation reads `WHERE status = 'completed' AND shopify_pushed_at IS NULL`.
 
+> **Updated (ADR-0007, 2026-05-27)**: The push job was extended to a two-phase sweep. Phase 1 is the inventory adjust described above. Phase 2 writes `garment_mgmt/last_batch_no` on the Shopify product variant. The SELECT broadens to `shopify_pushed_at IS NULL OR shopify_batch_metafield_at IS NULL`. See ADR-0007 for the full retry semantics and new schema columns.
+
 ### 6. Required env vars
 
 **Outbound (inventory push)**
@@ -167,7 +169,8 @@ Required Shopify app scopes: `write_inventory`, `read_inventory`, `read_products
 ## Open questions
 
 1. ~~**What does Cin7 own now?**~~ **Resolved (2026-05-27):** Cin7 is dropped entirely. Raw-material tracking moves to **InvenTree** (MIT-licensed, self-hosted). See ADR-0006 for the full decision, ownership boundaries, and iter-3 integration plan.
-2. ~~**Should each batch have a Shopify metafield with the batch ID?**~~ **Resolved (PR #25, 2026-05-27):** Implemented as an inbound `orders/create` webhook instead. Shopify posts to `POST /webhooks/orders`; the service allocates FIFO batches and inserts `shopify_order_line_batches` rows. The operator queries from our side via `gm batch find --order <shopifyOrderId>` or `GET /api/batches/by-order`. This keeps the forensic record in our DB rather than in Shopify metafields, consistent with the goals in §2 of this ADR.
+2. ~~**Should each batch have a Shopify metafield with the batch ID?**~~ **Resolved (2026-05-27):** Yes — variant-level `garment_mgmt/last_batch_no` written by the push job after each successful inventory adjust. See ADR-0007 for the full decision, rejected order-line-level alternative, retry semantics, and required Shopify scope (`write_metafields`).
+3. ~~**How do we recover which batches fulfilled a given Shopify order?**~~ **Resolved (PR #25, 2026-05-27):** Inbound `orders/create` webhook. Shopify posts to `POST /webhooks/orders`; the service allocates FIFO batches and inserts `shopify_order_line_batches` rows. The operator queries from our side via `gm batch find --order <shopifyOrderId>` or `GET /api/batches/by-order`. This keeps an order→batch forensic record in our DB, complementing the outbound variant-level metafield from ADR-0007, consistent with the goals in §2 of this ADR.
 
 ## Related
 

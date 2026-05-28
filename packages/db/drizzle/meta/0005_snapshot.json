@@ -1,6 +1,6 @@
 {
-  "id": "10d7d5cf-4b55-4b7b-8d07-a90aa7190d67",
-  "prevId": "a8e1bb52-7b8e-4f2e-9a91-5f6b1c8d4e3a",
+  "id": "7d53e0df-c73b-4728-bc94-4531e5d4ca22",
+  "prevId": "6a055bb3-c50f-4f79-8ef4-e1dbcee9a855",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2775,6 +2775,182 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.production_units": {
+      "name": "production_units",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "production_units_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "unit_serial": {
+          "name": "unit_serial",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "batch_id": {
+          "name": "batch_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "production_unit_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'created'"
+        },
+        "qc_verdict": {
+          "name": "qc_verdict",
+          "type": "qc_verdict",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qc_rejected_reason": {
+          "name": "qc_rejected_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qc_actor_user_id": {
+          "name": "qc_actor_user_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "qc_at": {
+          "name": "qc_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "production_units_unit_serial_idx": {
+          "name": "production_units_unit_serial_idx",
+          "columns": [
+            {
+              "expression": "unit_serial",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "production_units_batch_idx": {
+          "name": "production_units_batch_idx",
+          "columns": [
+            {
+              "expression": "batch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "production_units_batch_verdict_idx": {
+          "name": "production_units_batch_verdict_idx",
+          "columns": [
+            {
+              "expression": "batch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "qc_verdict",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "production_units_batch_id_production_batches_id_fk": {
+          "name": "production_units_batch_id_production_batches_id_fk",
+          "tableFrom": "production_units",
+          "tableTo": "production_batches",
+          "columnsFrom": [
+            "batch_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "production_units_qc_actor_user_id_users_id_fk": {
+          "name": "production_units_qc_actor_user_id_users_id_fk",
+          "tableFrom": "production_units",
+          "tableTo": "users",
+          "columnsFrom": [
+            "qc_actor_user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "production_units_unit_serial_unique": {
+          "name": "production_units_unit_serial_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "unit_serial"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.production_events": {
       "name": "production_events",
       "schema": "",
@@ -3225,6 +3401,139 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
+    },
+    "public.shopify_order_line_batches": {
+      "name": "shopify_order_line_batches",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true,
+          "identity": {
+            "type": "always",
+            "name": "shopify_order_line_batches_id_seq",
+            "schema": "public",
+            "increment": "1",
+            "startWith": "1",
+            "minValue": "1",
+            "maxValue": "9223372036854775807",
+            "cache": "1",
+            "cycle": false
+          }
+        },
+        "shopify_order_id": {
+          "name": "shopify_order_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "line_item_id": {
+          "name": "line_item_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "batch_id": {
+          "name": "batch_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "qty": {
+          "name": "qty",
+          "type": "numeric(12, 3)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "shopify_order_line_batches_order_line_batch_idx": {
+          "name": "shopify_order_line_batches_order_line_batch_idx",
+          "columns": [
+            {
+              "expression": "shopify_order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "line_item_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "batch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "shopify_order_line_batches_order_idx": {
+          "name": "shopify_order_line_batches_order_idx",
+          "columns": [
+            {
+              "expression": "shopify_order_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "shopify_order_line_batches_batch_idx": {
+          "name": "shopify_order_line_batches_batch_idx",
+          "columns": [
+            {
+              "expression": "batch_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "shopify_order_line_batches_batch_id_production_batches_id_fk": {
+          "name": "shopify_order_line_batches_batch_id_production_batches_id_fk",
+          "tableFrom": "shopify_order_line_batches",
+          "tableTo": "production_batches",
+          "columnsFrom": [
+            "batch_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     }
   },
   "enums": {
@@ -3409,6 +3718,16 @@
         "pass",
         "fail",
         "pass_with_notes"
+      ]
+    },
+    "public.production_unit_status": {
+      "name": "production_unit_status",
+      "schema": "public",
+      "values": [
+        "created",
+        "qc_passed",
+        "qc_rejected",
+        "shipped"
       ]
     },
     "public.pvt_status": {
