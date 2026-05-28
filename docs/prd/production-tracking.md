@@ -46,7 +46,7 @@ This PRD fills that gap.
 - Native mobile — iteration 4+
 - Replacing the Shopify storefront — out of scope forever
 - Sew-line capacity planning, machine assignment, scheduling — iteration 3+
-- Per-garment tracking (one row per individual unit) — deferred; we track at the batch level. If a future warranty workflow needs unit-level granularity, a `production_units` table can be added then.
+- Per-garment tracking (one row per individual unit) — ✅ shipped (PR #9, ADR-0007). Units are minted at `startProduction`; `production_units` table carries serial, status, and per-unit QC verdict.
 
 ---
 
@@ -314,6 +314,6 @@ The PR is mergeable when:
 | ADR-0006: InvenTree for raw-material tracking — Accepted (2026-05-27) | ✅ Done  |
 | Shopify metafield with batch ID on order lines                        | P3       |
 | Customer order ↔ batch reverse lookup (Shopify webhook)               | P3       |
-| Per-unit tracking under a batch (warranty workflow)                   | P4       |
+| Per-unit tracking under a batch (warranty workflow)                   | ✅ Done  |
 | Shopify token rotation runbook                                        | P3       |
 | Sew-line capacity planning + machine assignment                       | P3       |

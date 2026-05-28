@@ -14,6 +14,7 @@ import { registerMaterialRoutes } from "./routes/materials.js";
 import { registerPoRoutes } from "./routes/pos.js";
 import { registerProductRoutes } from "./routes/products.js";
 import { registerPvtRoutes, registerPvtStatusRoute } from "./routes/pvt.js";
+import { registerBatchUnitRoutes, registerUnitRoutes } from "./routes/units.js";
 import { registerVendorRoutes } from "./routes/vendors.js";
 
 declare module "fastify" {
@@ -95,6 +96,8 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   await app.register(registerBomRoutes, { prefix: "/api/boms" });
   await app.register(registerCutTicketRoutes, { prefix: "/api/cut-tickets" });
   await app.register(registerBatchRoutes, { prefix: "/api/batches" });
+  await app.register(registerBatchUnitRoutes, { prefix: "/api/batches" });
+  await app.register(registerUnitRoutes, { prefix: "/api/units" });
   await app.register(registerPvtRoutes, { prefix: "/api/pvt" });
 
   return app;

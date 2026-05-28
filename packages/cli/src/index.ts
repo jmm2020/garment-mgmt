@@ -2,6 +2,7 @@
 import { Command } from "commander";
 import { registerBatchCommand } from "./commands/batch.js";
 import { registerPvtCommand } from "./commands/pvt.js";
+import { registerUnitCommand } from "./commands/unit.js";
 import { DEFAULT_HOST, printJson, readStdin, request, saveSession } from "./lib/request.js";
 
 const program = new Command();
@@ -105,6 +106,7 @@ program.addCommand(lot);
 
 registerBatchCommand(program);
 registerPvtCommand(program);
+registerUnitCommand(program);
 
 program.parseAsync().catch((err: unknown) => {
   console.error(err instanceof Error ? err.message : String(err));
