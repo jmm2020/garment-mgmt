@@ -87,7 +87,7 @@ old one stays valid until you explicitly revoke it (see §5).
 ## 3. Deploy with the new token (zero-drop procedure)
 
 1. **Stop the push loop** if it runs as a standalone process (future: `pnpm push-job`).
-   Send `SIGTERM` / `Ctrl-C`. _Caveat: as of this branch the push loop
+   Send `SIGTERM` / `Ctrl-C`. _Caveat: as of this writing the push loop
    (`startInventoryPushLoop`) is defined but not yet wired into server startup, so there
    is no separate process to stop — the server restart in step 4 is sufficient. Update
    this step if/when the loop is wired into `index.ts`._
