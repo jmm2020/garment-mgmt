@@ -141,8 +141,8 @@ curl -s -X POST \
 ### 4b. Confirm the push job is healthy after cutover
 
 ```bash
-# DB reachable (no-op confirms connectivity)
-pnpm --filter @garment-mgmt/db migrate
+# Confirm DB reachable (read-only)
+psql "$DATABASE_URL" -c "SELECT 1" > /dev/null && echo "DB reachable"
 
 # Should return 0 rows if the push job is healthy (all completed batches pushed)
 psql "$DATABASE_URL" -c "
