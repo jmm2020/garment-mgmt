@@ -163,7 +163,9 @@ packages/server/src/
     production-unit-service.ts    ← mintUnits, recordUnitQcVerdict, getUnit, listBatchUnits
     pvt-queries.ts                ← read-only PVT queries
     pvt-service.ts                ← createPvt, markPvtShipped, validatePvt, rejectPvt
+    shopify-webhook-service.ts    ← processOrderWebhook, assignFifoBatches, findBatchesByOrder
   routes/                  ← One file per resource. Routes are Zod-validated thin wrappers.
+  routes/webhooks.ts       ← POST /webhooks/orders (Shopify orders/create, HMAC-gated)
   app.ts                   ← buildApp(): env parse → drizzle → routes → setErrorHandler
 ```
 

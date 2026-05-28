@@ -12,6 +12,10 @@ const envSchema = z.object({
   SHOPIFY_ADMIN_TOKEN: z.string().optional(),
   SHOPIFY_LOCATION_ID: z.string().optional(),
   SHOPIFY_PUSH_INTERVAL_MS: z.coerce.number().int().positive().default(30_000),
+  // HMAC secret for the inbound orders/create webhook. Absent => verification skipped
+  // (CI / local dev). Production deployments must set this to match the Shopify app
+  // webhook secret.
+  SHOPIFY_WEBHOOK_SECRET: z.string().optional(),
   // Per-product override lives on products.pvt_validity_months; this is the fallback.
   PVT_DEFAULT_VALIDITY_MONTHS: z.coerce.number().int().positive().default(6),
 });

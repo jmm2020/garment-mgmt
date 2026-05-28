@@ -96,36 +96,47 @@ scripts/      One-time setup (e.g., init-test-db.sql)
 
 Session is persisted to `~/.garment-mgmt/session` after login.
 
-| Command                            | Notes                                        |
-| ---------------------------------- | -------------------------------------------- |
-| `gm login <email> --password <pw>` | Authenticate; writes session token           |
-| `gm logout`                        | Drop session                                 |
-| `gm vendors list`                  | List vendors                                 |
-| `gm materials list`                | List materials                               |
-| `gm po list`                       | List purchase orders                         |
-| `gm po show <id>`                  | PO with lines                                |
-| `gm po receive <lineId>`           | Receive lots — stdin: `{"lots":[...]}`       |
-| `gm bom show <id>`                 | BOM with components                          |
-| `gm ct list`                       | List cut tickets                             |
-| `gm ct create`                     | Create cut ticket — stdin: JSON body         |
-| `gm ct show <id>`                  | Cut ticket with allocations                  |
-| `gm ct close <id>`                 | Close ticket — stdin: `{"actuals":[...]}`    |
-| `gm lot provenance <id>`           | Walk lot → PO line → PO → vendor + movements |
+| Command                              | Notes                                          |
+| ------------------------------------ | ---------------------------------------------- |
+| `gm login <email> --password <pw>`   | Authenticate; writes session token             |
+| `gm logout`                          | Drop session                                   |
+| `gm vendors list`                    | List vendors                                   |
+| `gm materials list`                  | List materials                                 |
+| `gm po list`                         | List purchase orders                           |
+| `gm po show <id>`                    | PO with lines                                  |
+| `gm po receive <lineId>`             | Receive lots — stdin: `{"lots":[...]}`         |
+| `gm bom show <id>`                   | BOM with components                            |
+| `gm ct list`                         | List cut tickets                               |
+| `gm ct create`                       | Create cut ticket — stdin: JSON body           |
+| `gm ct show <id>`                    | Cut ticket with allocations                    |
+| `gm ct close <id>`                   | Close ticket — stdin: `{"actuals":[...]}`      |
+| `gm lot provenance <id>`             | Walk lot → PO line → PO → vendor + movements   |
+| `gm batch list [--status <s>]`                            | List batches, optionally filtered by status            |
+| `gm batch show <batchNoOrId>`                             | Show batch with events                                 |
+| `gm batch stage <batchNo>`                                | Advance to `staged_pre_prod`                           |
+| `gm batch start <batchNo>`                                | Advance to `in_production`                             |
+| `gm batch submit-qc <batchNo> --qty <n>`                  | Submit for QC                                          |
+| `gm batch complete <batchNo> --qty <n> --verdict <v>`     | Complete batch; triggers Shopify inventory push        |
+| `gm batch cancel <batchNo> --reason <r>`                  | Cancel batch                                           |
+| `gm batch find <batchNo>`                                 | Forensic lookup by `PB-YYYY-####`                      |
+| `gm batch find --order <shopifyOrderId>`                  | Reverse lookup: Shopify order → batches + cut tickets + fabric lots |
 
 ## HTTP API
 
 Mounted under `/` from `packages/server/src/routes/`. All mutating endpoints require an active session cookie / bearer (set by `POST /auth/login`).
 
-| Resource      | Routes                                                                               |
-| ------------- | ------------------------------------------------------------------------------------ |
-| `auth`        | `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`                              |
-| `vendors`     | `GET/POST /vendors`, `GET /vendors/:id`                                              |
-| `materials`   | `GET/POST /materials`, `GET /materials/:id`, `POST /materials/:id/variants`          |
-| `products`    | `GET/POST /products`, `GET /products/:id`, `POST /products/:id/variants`             |
-| `pos` (POs)   | `GET/POST /pos`, `GET /pos/:id`, `POST /pos/:id/send`, `POST /pos/:id/confirm`       |
-| `lots`        | `GET /lots/:id`, `GET /lots/:id/provenance`, `POST /pos/:lineId/receive`             |
-| `boms`        | `GET/POST /boms`, `POST /boms/:id/approve`, `POST /boms/:id/activate`                |
-| `cut-tickets` | `GET/POST /cut-tickets`, `POST /cut-tickets/:id/mark-cutting`, `…/close`, `…/cancel` |
+| Resource         | Routes                                                                                 |
+| ---------------- | -------------------------------------------------------------------------------------- |
+| `auth`           | `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`                                |
+| `vendors`        | `GET/POST /vendors`, `GET /vendors/:id`                                                |
+| `materials`      | `GET/POST /materials`, `GET /materials/:id`, `POST /materials/:id/variants`            |
+| `products`       | `GET/POST /products`, `GET /products/:id`, `POST /products/:id/variants`               |
+| `pos` (POs)      | `GET/POST /pos`, `GET /pos/:id`, `POST /pos/:id/send`, `POST /pos/:id/confirm`         |
+| `lots`           | `GET /lots/:id`, `GET /lots/:id/provenance`, `POST /pos/:lineId/receive`               |
+| `boms`           | `GET/POST /boms`, `POST /boms/:id/approve`, `POST /boms/:id/activate`                  |
+| `cut-tickets`    | `GET/POST /cut-tickets`, `POST /cut-tickets/:id/mark-cutting`, `…/close`, `…/cancel`   |
+| `batches`        | `GET/POST /api/batches`, `GET /api/batches/by-order?order=<id>`, `GET /api/batches/:ref`, `POST /api/batches/:ref/stage`, `…/start`, `…/submit-qc`, `…/complete`, `…/cancel` |
+| `webhooks`       | `POST /webhooks/orders` (Shopify `orders/create` — HMAC-verified when `SHOPIFY_WEBHOOK_SECRET` is set; no session auth required) |
 
 Errors are emitted by the central handler with stable shape:
 
@@ -139,18 +150,29 @@ Errors are emitted by the central handler with stable shape:
 
 `.env.example` is the source of truth. Required:
 
-| Variable              | Purpose                                                                                                                                    |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| `DATABASE_URL`        | Postgres connection string                                                                                                                 |
-| `TEST_DATABASE_URL`   | Separate DB for the test harness (`withTestDb`)                                                                                            |
-| `PORT`                | Server bind port (default `3000`)                                                                                                          |
-| `SESSION_SECRET`      | HMAC secret for session tokens — **rotate to ≥ 32 chars**                                                                                 |
-| `NODE_ENV`            | `development` / `test` / `production`                                                                                                     |
-| `SEED_ADMIN_EMAIL`    | Email used by `pnpm seed`                                                                                                                  |
-| `SEED_ADMIN_PASSWORD` | Password used by `pnpm seed`                                                                                                               |
-| `SHOPIFY_SHOP_DOMAIN` | `your-shop.myshopify.com`                                                                                                                  |
-| `SHOPIFY_ADMIN_TOKEN` | Custom-app Admin API access token. Required scopes: `write_inventory`, `read_inventory`, `read_products`, `read_locations`, `write_metafields` |
-| `SHOPIFY_LOCATION_ID` | Shopify location to adjust inventory against                                                                                               |
+| Variable                | Purpose                                                       |
+| ----------------------- | ------------------------------------------------------------- |
+| `DATABASE_URL`          | Postgres connection string                                    |
+| `TEST_DATABASE_URL`     | Separate DB for the test harness (`withTestDb`)               |
+| `PORT`                  | Server bind port (default `3000`)                             |
+| `SESSION_SECRET`        | HMAC secret for session tokens — **rotate to ≥ 32 chars**     |
+| `NODE_ENV`              | `development` / `test` / `production`                         |
+| `SEED_ADMIN_EMAIL`      | Email used by `pnpm seed`                                     |
+| `SEED_ADMIN_PASSWORD`   | Password used by `pnpm seed`                                  |
+
+**Iteration 2 — Shopify outbound push** (required when pushing FG inventory to Shopify):
+
+| Variable                   | Purpose                                                       |
+| -------------------------- | ------------------------------------------------------------- |
+| `SHOPIFY_SHOP_DOMAIN`      | `your-shop.myshopify.com`                                     |
+| `SHOPIFY_ADMIN_TOKEN`      | Custom-app Admin API access token. Required scopes: `write_inventory`, `read_inventory`, `read_products`, `read_locations`, `write_metafields` |
+| `SHOPIFY_LOCATION_ID`      | Shopify location to adjust inventory against                  |
+
+**Iteration 2 — Shopify inbound webhook** (required for order → batch reverse lookup):
+
+| Variable                   | Purpose                                                                              |
+| -------------------------- | ------------------------------------------------------------------------------------ |
+| `SHOPIFY_WEBHOOK_SECRET`   | HMAC secret matching the Shopify app webhook config. Absent → verification skipped (CI/dev only). **Must be set in production.** |
 
 ## Testing
 

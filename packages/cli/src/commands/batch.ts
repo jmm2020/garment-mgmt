@@ -81,13 +81,29 @@ export function registerBatchCommand(program: Command): void {
       printJson(data);
     });
 
-  // `find` is an explicit alias for forensic lookup by PB-YYYY-####.
+  // Forensic lookup: by batch number (PB-YYYY-####) or by Shopify order (--order).
   batch
-    .command("find <batchNo>")
-    .description("Forensic lookup by PB-YYYY-#### batch number (alias for show)")
-    .action(async (batchNo: string) => {
-      const data = await request("GET", `/api/batches/${encodeURIComponent(batchNo)}`);
-      printJson(data);
+    .command("find [batchNo]")
+    .description(
+      "Forensic lookup: by PB-YYYY-#### batch number, or by Shopify order via --order",
+    )
+    .option("--order <shopifyOrderId>", "Shopify order id for reverse lookup")
+    .action(async (batchNo: string | undefined, opts: { order?: string }) => {
+      if (opts.order) {
+        const data = await request(
+          "GET",
+          `/api/batches/by-order?order=${encodeURIComponent(opts.order)}`,
+        );
+        printJson(data);
+        return;
+      }
+      if (batchNo) {
+        const data = await request("GET", `/api/batches/${encodeURIComponent(batchNo)}`);
+        printJson(data);
+        return;
+      }
+      console.error("error: provide either <batchNo> or --order <shopifyOrderId>");
+      process.exit(1);
     });
 
   batch
