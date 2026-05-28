@@ -174,6 +174,12 @@ Errors are emitted by the central handler with stable shape:
 | -------------------------- | ------------------------------------------------------------------------------------ |
 | `SHOPIFY_WEBHOOK_SECRET`   | HMAC secret matching the Shopify app webhook config. Absent → verification skipped (CI/dev only). **Must be set in production.** |
 
+## Operational Runbooks
+
+| Runbook | When to use |
+| ------- | ----------- |
+| [Shopify token rotation](docs/runbooks/shopify-token-rotation.md) | Annual `SHOPIFY_ADMIN_TOKEN` renewal |
+
 ## Testing
 
 ```bash
