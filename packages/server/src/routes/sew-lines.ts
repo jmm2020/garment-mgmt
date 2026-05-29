@@ -1,5 +1,6 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { schema } from "@garment-mgmt/db";
 import { requireAuth } from "../auth/middleware.js";
 import {
   addMachine,
@@ -10,15 +11,8 @@ import {
   updateMachineStatus,
 } from "../services/sew-line-service.js";
 
-const machineTypeEnum = z.enum([
-  "flatlock",
-  "coverstitch",
-  "single_needle",
-  "overlock",
-  "bartack",
-  "other",
-]);
-const machineStatusEnum = z.enum(["available", "in_use", "maintenance"]);
+const machineTypeEnum = z.enum(schema.MACHINE_TYPES);
+const machineStatusEnum = z.enum(schema.MACHINE_STATUSES);
 
 const createBody = z.object({
   code: z.string().min(1),

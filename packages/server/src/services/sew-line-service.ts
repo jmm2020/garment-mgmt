@@ -155,8 +155,8 @@ export async function getLineLoad(
   date: string,
 ): Promise<LineLoad> {
   await loadSewLine(db, sewLineId);
-  // SQL-side aggregation (CLAUDE.md rule 4) — never sum numerics in JS. Load is keyed off the
-  // batch receive date in the server's local timezone (documented in ADR-0008).
+  // SQL-side aggregation (CLAUDE.md rule 4) — never sum numerics in JS. Load is keyed off
+  // received_at::date evaluated in the PostgreSQL session timezone (see ADR-0008).
   const rows = await db.execute<{ total: string; cnt: string }>(sql`
     SELECT
       COALESCE(SUM(qty_planned), '0')::text AS total,
@@ -234,6 +234,12 @@ export async function releaseBatchFromLine(
         `Cannot release a line from batch in status=${before.status}`,
       );
     }
+    if (before.sewLineId === null) {
+      throw new BusinessRuleError(
+        "batch_not_assigned",
+        "Batch is not currently assigned to a sew line",
+      );
+    }
 
     const [after] = await tx
       .update(schema.productionBatches)
@@ -261,7 +267,8 @@ export async function releaseBatchFromLine(
   });
 }
 
-// DbExecutor (not Database) so it composes inside assignBatchToLine's transaction (CLAUDE.md rule 3).
+// DbExecutor so this helper can be called both at the top level and inside a transaction
+// (e.g., assignBatchToLine calls it after opening db.transaction).
 async function loadSewLine(db: DbExecutor, id: number): Promise<SewLine> {
   const [line] = await db.select().from(schema.sewLines).where(eq(schema.sewLines.id, id));
   if (!line) throw new NotFoundError("sew_line", id);

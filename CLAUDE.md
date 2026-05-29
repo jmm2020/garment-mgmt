@@ -158,13 +158,17 @@ packages/server/src/
     bom-service.ts                ← + activateBom + computeRequirementsFromComponents
     cut-ticket-service.ts         ← + pickFifo + pickSingleDyeLot (exported pure fns)
     product-service.ts
-    production-batch-queries.ts   ← read-only batch queries extracted for reuse
+    production-batch-queries.ts   ← shared batch queries + writeEvent helper
     production-batch-service.ts   ← startProduction, receiveFromCutter, completeBatch
     production-unit-service.ts    ← mintUnits, recordUnitQcVerdict, getUnit, listBatchUnits
     pvt-queries.ts                ← read-only PVT queries
     pvt-service.ts                ← createPvt, markPvtShipped, validatePvt, rejectPvt
     shopify-webhook-service.ts    ← processOrderWebhook, assignFifoBatches, findBatchesByOrder
+    sew-line-service.ts           ← createSewLine, addMachine, updateMachineStatus,
+                                     assignBatchToLine, releaseBatchFromLine,
+                                     listSewLines, getSewLine, getLineLoad
   routes/                  ← One file per resource. Routes are Zod-validated thin wrappers.
+  routes/sew-lines.ts      ← CRUD + machine management + load query
   routes/webhooks.ts       ← POST /webhooks/orders (Shopify orders/create, HMAC-gated)
   app.ts                   ← buildApp(): env parse → drizzle → routes → setErrorHandler
 ```
@@ -219,6 +223,6 @@ packages/server/src/
 | Iter | Theme                                            | Status       |
 | ---- | ------------------------------------------------ | ------------ |
 | 1    | Data layer, REST API, CLI, lot/cut foundation    | ✅ Merged (PR #1)         |
-| 2    | Production batches, station tracking, Shopify FG | In progress (PRs #2–#9)  |
+| 2    | Production batches, station tracking, Shopify FG | In progress (PRs #2–#11) |
 | 3    | React UI, real-time, sew/QC/finish/pack          | future       |
 | 4+   | CSV export, multi-facility, mobile, SAM costing  | future       |

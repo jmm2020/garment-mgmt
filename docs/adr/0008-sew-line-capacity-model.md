@@ -87,7 +87,7 @@ non-critical line reference is nulled.
 
 `getLineLoad` sums in PostgreSQL (`COALESCE(SUM(qty_planned), '0')`), never by round-tripping
 numerics through JS (CLAUDE.md rule 4). Load is keyed off `received_at::date`; the `date`
-argument is interpreted in the server's local timezone.
+argument is interpreted in the PostgreSQL session timezone.
 
 ## Consequences
 

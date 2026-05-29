@@ -1,6 +1,7 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { BusinessRuleError, NotFoundError } from "../src/errors.js";
 import {
+  cancelBatch,
   completeBatch,
   receiveFromCutter,
   stageForProduction,
@@ -13,6 +14,7 @@ import {
   createSewLine,
   getLineLoad,
   getSewLine,
+  listSewLines,
   releaseBatchFromLine,
   updateMachineStatus,
 } from "../src/services/sew-line-service.js";
@@ -188,7 +190,7 @@ describe("releaseBatchFromLine", () => {
     });
   });
 
-  it("throws BusinessRuleError when releasing from a terminal batch", async () => {
+  it("throws BusinessRuleError when releasing from a completed (terminal) batch", async () => {
     await withTestDb(async (db) => {
       const fx = await seedProductionFixture(db);
       await seedValidatedPvt(db, fx);
@@ -203,6 +205,75 @@ describe("releaseBatchFromLine", () => {
       await submitForQc(db, { ref: batch.id, qty: "5", actorUserId: fx.userId });
       await completeBatch(db, { ref: batch.id, qty: "5", verdict: "pass", actorUserId: fx.userId });
       await expect(releaseBatchFromLine(db, batch.id)).rejects.toBeInstanceOf(BusinessRuleError);
+    });
+  });
+
+  it("throws BusinessRuleError when releasing from a cancelled (terminal) batch", async () => {
+    await withTestDb(async (db) => {
+      const fx = await seedProductionFixture(db);
+      await seedValidatedPvt(db, fx);
+      const batch = await receiveFromCutter(db, {
+        cutTicketId: fx.productionCutTicketId,
+        productVariantId: fx.variantId,
+        qtyPlanned: "5",
+        cutterUserId: fx.userId,
+      });
+      await stageForProduction(db, batch.id, fx.userId);
+      await cancelBatch(db, { ref: batch.id, reason: "test cancel", actorUserId: fx.userId });
+      await expect(releaseBatchFromLine(db, batch.id)).rejects.toBeInstanceOf(BusinessRuleError);
+    });
+  });
+
+  it("throws BusinessRuleError when releasing a batch not assigned to any line", async () => {
+    await withTestDb(async (db) => {
+      const fx = await seedProductionFixture(db);
+      await seedValidatedPvt(db, fx);
+      const batch = await receiveFromCutter(db, {
+        cutTicketId: fx.productionCutTicketId,
+        productVariantId: fx.variantId,
+        qtyPlanned: "5",
+        cutterUserId: fx.userId,
+      });
+      await stageForProduction(db, batch.id, fx.userId);
+      await startProduction(db, batch.id, fx.userId);
+      await expect(releaseBatchFromLine(db, batch.id)).rejects.toBeInstanceOf(BusinessRuleError);
+    });
+  });
+});
+
+describe("listSewLines", () => {
+  it("returns empty array when no lines exist", async () => {
+    await withTestDb(async (db) => {
+      expect(await listSewLines(db)).toHaveLength(0);
+    });
+  });
+
+  it("returns lines ordered by code with machines grouped per line", async () => {
+    await withTestDb(async (db) => {
+      const lineB = await createSewLine(db, {
+        code: "LSL-B",
+        name: "Line B",
+        capacityUnitsPerDay: 50,
+      });
+      const lineA = await createSewLine(db, {
+        code: "LSL-A",
+        name: "Line A",
+        capacityUnitsPerDay: 100,
+      });
+      await addMachine(db, { sewLineId: lineA.id, code: "LSL-M1", type: "flatlock" });
+      await addMachine(db, { sewLineId: lineA.id, code: "LSL-M2", type: "overlock" });
+
+      const lines = await listSewLines(db);
+      const a = lines.find((l) => l.id === lineA.id);
+      const b = lines.find((l) => l.id === lineB.id);
+      expect(a).toBeDefined();
+      expect(b).toBeDefined();
+      expect(a!.machines).toHaveLength(2);
+      expect(b!.machines).toHaveLength(0);
+      // ordered by code — LSL-A comes before LSL-B
+      const aIdx = lines.findIndex((l) => l.id === lineA.id);
+      const bIdx = lines.findIndex((l) => l.id === lineB.id);
+      expect(aIdx).toBeLessThan(bIdx);
     });
   });
 });
@@ -245,6 +316,33 @@ describe("getLineLoad", () => {
       const load = await getLineLoad(db, line.id, today);
       expect(Number(load.totalQtyPlanned)).toBe(25);
       expect(load.batchCount).toBe(1);
+    });
+  });
+
+  it("excludes batches that are not in_production status from load", async () => {
+    await withTestDb(async (db) => {
+      const fx = await seedProductionFixture(db);
+      await seedValidatedPvt(db, fx);
+      const line = await createSewLine(db, {
+        code: "SL-J",
+        name: "Line J",
+        capacityUnitsPerDay: 100,
+      });
+
+      // batch assigned to line but not yet in in_production (staged_pre_prod)
+      const batch = await receiveFromCutter(db, {
+        cutTicketId: fx.productionCutTicketId,
+        productVariantId: fx.variantId,
+        qtyPlanned: "15",
+        cutterUserId: fx.userId,
+      });
+      await stageForProduction(db, batch.id, fx.userId);
+      await assignBatchToLine(db, { ref: batch.id, sewLineId: line.id });
+
+      const today = new Date().toISOString().slice(0, 10);
+      const load = await getLineLoad(db, line.id, today);
+      expect(load.totalQtyPlanned).toBe("0");
+      expect(load.batchCount).toBe(0);
     });
   });
 
