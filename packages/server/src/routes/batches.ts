@@ -10,6 +10,7 @@ import {
   startProduction,
   submitForQc,
 } from "../services/production-batch-service.js";
+import { assignBatchToLine, releaseBatchFromLine } from "../services/sew-line-service.js";
 import { findBatchesByOrder } from "../services/shopify-webhook-service.js";
 
 const createBody = z.object({
@@ -28,6 +29,7 @@ const completeBody = z.object({
   note: z.string().nullable().optional(),
 });
 const cancelBody = z.object({ reason: z.string().min(1) });
+const assignLineBody = z.object({ sewLineId: z.number().int().positive() });
 
 const listQuery = z.object({
   status: z
@@ -126,6 +128,31 @@ export async function registerBatchRoutes(app: FastifyInstance): Promise<void> {
       const ref = parseRef((req.params as { ref: string }).ref);
       const body = cancelBody.parse(req.body);
       return cancelBatch(req.db, { ref, reason: body.reason, actorUserId: req.currentUser?.id });
+    },
+  );
+
+  // Line assignment is metadata (ADR-0008), not a status transition. Accepts numeric id or
+  // PB-YYYY-#### batch_no like the other batch routes.
+  app.post(
+    "/:ref/assign-line",
+    { preHandler: requireAuth(["admin", "production_staff"]) },
+    async (req) => {
+      const ref = parseRef((req.params as { ref: string }).ref);
+      const body = assignLineBody.parse(req.body);
+      return assignBatchToLine(req.db, {
+        ref,
+        sewLineId: body.sewLineId,
+        actorUserId: req.currentUser?.id,
+      });
+    },
+  );
+
+  app.post(
+    "/:ref/release-line",
+    { preHandler: requireAuth(["admin", "production_staff"]) },
+    async (req) => {
+      const ref = parseRef((req.params as { ref: string }).ref);
+      return releaseBatchFromLine(req.db, ref, req.currentUser?.id);
     },
   );
 }

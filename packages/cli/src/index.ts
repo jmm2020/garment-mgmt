@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { registerBatchCommand } from "./commands/batch.js";
+import { registerLineCommand } from "./commands/line.js";
 import { registerPvtCommand } from "./commands/pvt.js";
 import { registerUnitCommand } from "./commands/unit.js";
 import { DEFAULT_HOST, printJson, readStdin, request, saveSession } from "./lib/request.js";
@@ -105,6 +106,7 @@ lot.command("provenance <id>").action(async (id: string) => {
 program.addCommand(lot);
 
 registerBatchCommand(program);
+registerLineCommand(program);
 registerPvtCommand(program);
 registerUnitCommand(program);
 

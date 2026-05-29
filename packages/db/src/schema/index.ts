@@ -10,6 +10,7 @@ export * from "./boms";
 export * from "./markers";
 export * from "./cut-tickets";
 export * from "./remnants";
+export * from "./sew-lines";
 export * from "./production-batches";
 export * from "./production-units";
 export * from "./production-events";
