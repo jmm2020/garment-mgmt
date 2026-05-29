@@ -148,9 +148,7 @@ export interface WriteEventInput {
   payload?: unknown;
 }
 
-// Append a production_events row. Shared by production-batch-service.ts (status transitions)
-// and sew-line-service.ts (line_assignment / line_release). Takes DbExecutor so it composes
-// inside a caller's transaction.
+// Takes DbExecutor so it composes inside a caller's transaction.
 export async function writeEvent(db: DbExecutor, input: WriteEventInput): Promise<void> {
   await db.insert(schema.productionEvents).values({
     batchId: input.batchId,

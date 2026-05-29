@@ -267,8 +267,7 @@ export async function releaseBatchFromLine(
   });
 }
 
-// DbExecutor so this helper can be called both at the top level and inside a transaction
-// (e.g., assignBatchToLine calls it after opening db.transaction).
+// Takes DbExecutor so it can be called inside a caller's transaction.
 async function loadSewLine(db: DbExecutor, id: number): Promise<SewLine> {
   const [line] = await db.select().from(schema.sewLines).where(eq(schema.sewLines.id, id));
   if (!line) throw new NotFoundError("sew_line", id);

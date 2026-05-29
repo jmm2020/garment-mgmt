@@ -47,7 +47,7 @@ export async function registerSewLineRoutes(app: FastifyInstance): Promise<void>
 
   app.get("/:id/load", async (req) => {
     const id = Number((req.params as { id: string }).id);
-    const q = loadQuery.parse(req.query ?? {});
+    const q = loadQuery.parse(req.query);
     return getLineLoad(req.db, id, q.date);
   });
 

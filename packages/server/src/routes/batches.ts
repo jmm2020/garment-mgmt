@@ -131,8 +131,7 @@ export async function registerBatchRoutes(app: FastifyInstance): Promise<void> {
     },
   );
 
-  // Line assignment is metadata (ADR-0008), not a status transition. Accepts numeric id or
-  // PB-YYYY-#### batch_no like the other batch routes.
+  // Metadata only (ADR-0008) — assigning a line does not change batch status.
   app.post(
     "/:ref/assign-line",
     { preHandler: requireAuth(["admin", "production_staff"]) },
