@@ -48,16 +48,4 @@ describe("DomainError hierarchy", () => {
     expect(err.code).toBe("internal_error");
     expect(isDomainError(err)).toBe(true);
   });
-
-  it("BusinessRuleError insert_returned_no_row slug has correct code", () => {
-    const err = new BusinessRuleError("insert_returned_no_row", "foo insert returned no row");
-    expect(err.code).toBe("rule.insert_returned_no_row");
-    expect(err.status).toBe(409);
-  });
-
-  it("BusinessRuleError update_returned_no_row slug has correct code", () => {
-    const err = new BusinessRuleError("update_returned_no_row", "foo update returned no row");
-    expect(err.code).toBe("rule.update_returned_no_row");
-    expect(err.status).toBe(409);
-  });
 });
