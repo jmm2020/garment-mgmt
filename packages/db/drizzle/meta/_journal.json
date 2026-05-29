@@ -43,6 +43,13 @@
       "when": 1779976667439,
       "tag": "0005_puzzling_emma_frost",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1780072278115,
+      "tag": "0006_swift_night_thrasher",
+      "breakpoints": true
     }
   ]
 }

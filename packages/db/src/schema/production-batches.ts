@@ -11,6 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { cutTickets } from "./cut-tickets";
 import { productVariants } from "./products";
+import { sewLines } from "./sew-lines";
 import { users } from "./users";
 
 // Status graph (see docs/prd/production-tracking.md):
@@ -66,6 +67,13 @@ export const productionBatches = pgTable(
     completedAt: timestamp("completed_at", { withTimezone: true }),
     cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
     cancelReason: text("cancel_reason"),
+    // Floor assignment (ADR-0008). Metadata only — assigning a line does NOT change status.
+    // ON DELETE set null: deleting a line nulls this reference, never cascade-deletes the
+    // forensic batch record (CLAUDE.md rule 8 corollary).
+    sewLineId: bigint("sew_line_id", { mode: "number" }).references(() => sewLines.id, {
+      onDelete: "set null",
+    }),
+    assignedAt: timestamp("assigned_at", { withTimezone: true }),
     // Idempotency marker for Shopify push. NULL until the background job successfully posts.
     shopifyPushedAt: timestamp("shopify_pushed_at", { withTimezone: true }),
     // Idempotency marker for variant metafield write. NULL until push job successfully

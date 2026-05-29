@@ -2,7 +2,7 @@ import { schema, type Database, type DbExecutor } from "@garment-mgmt/db";
 import { eq, sql } from "drizzle-orm";
 import { BusinessRuleError, NotFoundError, ValidationFailedError } from "../errors.js";
 import { recordAudit } from "./audit-service.js";
-import { loadBatch, type BatchRef } from "./production-batch-queries.js";
+import { loadBatch, writeEvent, type BatchRef } from "./production-batch-queries.js";
 import { mintUnits } from "./production-unit-service.js";
 import { assertPvtCurrent } from "./pvt-service.js";
 
@@ -389,26 +389,6 @@ async function transition(
       after,
     });
     return after;
-  });
-}
-
-interface WriteEventInput {
-  batchId: number;
-  eventType: string;
-  fromStatus?: string | null;
-  toStatus?: string | null;
-  actorUserId?: number;
-  payload?: unknown;
-}
-
-async function writeEvent(db: DbExecutor, input: WriteEventInput): Promise<void> {
-  await db.insert(schema.productionEvents).values({
-    batchId: input.batchId,
-    eventType: input.eventType,
-    fromStatus: input.fromStatus ?? null,
-    toStatus: input.toStatus ?? null,
-    actorUserId: input.actorUserId,
-    payload: input.payload ?? null,
   });
 }
 

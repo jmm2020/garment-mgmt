@@ -33,7 +33,7 @@ pnpm install
 cp .env.example .env
 
 pnpm db:up        # Postgres 16 in docker on :5432
-pnpm migrate      # apply Drizzle migrations (17 tables)
+pnpm migrate      # apply Drizzle migrations (19 tables)
 pnpm seed         # demo data: admin user, 3 vendors, 5 materials, 1 product, 1 PO, 2 lots
 
 pnpm dev          # Fastify on http://localhost:3000
@@ -120,6 +120,11 @@ Session is persisted to `~/.garment-mgmt/session` after login.
 | `gm batch cancel <batchNo> --reason <r>`                  | Cancel batch                                           |
 | `gm batch find <batchNo>`                                 | Forensic lookup by `PB-YYYY-####`                      |
 | `gm batch find --order <shopifyOrderId>`                  | Reverse lookup: Shopify order → batches + cut tickets + fabric lots |
+| `gm batch assign <batchNo> --line <id>`                  | Assign a production batch to a sew line                            |
+| `gm batch release <batchNo>`                             | Release a production batch from its sew line                       |
+| `gm line list`                                           | List all sew lines with machine counts                             |
+| `gm line show <id>`                                      | Show sew line detail including machines                            |
+| `gm line load <id> --date YYYY-MM-DD`                    | Show planned load for a line on a given date                       |
 
 ## HTTP API
 
@@ -135,7 +140,8 @@ Mounted under `/` from `packages/server/src/routes/`. All mutating endpoints req
 | `lots`           | `GET /lots/:id`, `GET /lots/:id/provenance`, `POST /pos/:lineId/receive`               |
 | `boms`           | `GET/POST /boms`, `POST /boms/:id/approve`, `POST /boms/:id/activate`                  |
 | `cut-tickets`    | `GET/POST /cut-tickets`, `POST /cut-tickets/:id/mark-cutting`, `…/close`, `…/cancel`   |
-| `batches`        | `GET/POST /api/batches`, `GET /api/batches/by-order?order=<id>`, `GET /api/batches/:ref`, `POST /api/batches/:ref/stage`, `…/start`, `…/submit-qc`, `…/complete`, `…/cancel` |
+| `batches`        | `GET/POST /api/batches`, `GET /api/batches/by-order?order=<id>`, `GET /api/batches/:ref`, `POST /api/batches/:ref/stage`, `…/start`, `…/submit-qc`, `…/complete`, `…/cancel`, `…/assign-line`, `…/release-line` |
+| `sew-lines`      | `GET /api/sew-lines`, `GET /api/sew-lines/:id`, `GET /api/sew-lines/:id/load?date=YYYY-MM-DD`, `POST /api/sew-lines`, `POST /api/sew-lines/:id/machines`, `PATCH /api/sew-lines/:id/machines/:machineId` |
 | `webhooks`       | `POST /webhooks/orders` (Shopify `orders/create` — HMAC-verified when `SHOPIFY_WEBHOOK_SECRET` is set; no session auth required) |
 
 Errors are emitted by the central handler with stable shape:
@@ -201,13 +207,14 @@ The `withTestDb(cb)` helper (`packages/server/test/helpers/test-db.ts`) wraps ea
 5. [Production tracking + Shopify FG inventory](docs/adr/0005-production-tracking-and-shopify-fg.md)
 6. [InvenTree for raw-material tracking (replaces Cin7)](docs/adr/0006-inventree-for-raw-materials.md)
 7. [Shopify batch_id variant metafield](docs/adr/0007-shopify-batch-id-metafield.md)
+8. [Sew-line capacity model + machine assignment](docs/adr/0008-sew-line-capacity-model.md)
 
 ## Roadmap
 
 | Iteration | Scope                                                                                        |
 | --------- | -------------------------------------------------------------------------------------------- |
 | **1**     | Data layer, services, REST API, CLI, lot provenance, cut-ticket flow (cut-only)              |
-| **2**     | Production batches (PB-YYYY-####), station tracking, structured SKUs, Shopify inventory push |
+| **2**     | Production batches (PB-YYYY-####), station tracking, structured SKUs, Shopify inventory push, sew-line capacity + machine assignment |
 | **3**     | React UI, real-time push (WS/SSE), sew/QC/finish/pack workflow                               |
 | **4+**    | CSV export, multi-facility, native mobile, SAM-based costing                                 |
 

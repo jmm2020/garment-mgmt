@@ -31,6 +31,10 @@ interface CancelOpts {
   reason: string;
 }
 
+interface AssignLineOpts {
+  line: string;
+}
+
 export function registerBatchCommand(program: Command): void {
   const batch = new Command("batch").description("Production batch commands");
 
@@ -156,6 +160,25 @@ export function registerBatchCommand(program: Command): void {
       const data = await request("POST", `/api/batches/${encodeURIComponent(ref)}/cancel`, {
         reason: opts.reason,
       });
+      printJson(data);
+    });
+
+  batch
+    .command("assign <ref>")
+    .description("Assign a batch to a sew line (metadata, not a status change)")
+    .requiredOption("--line <sewLineId>", "numeric sew line id")
+    .action(async (ref: string, opts: AssignLineOpts) => {
+      const data = await request("POST", `/api/batches/${encodeURIComponent(ref)}/assign-line`, {
+        sewLineId: Number(opts.line),
+      });
+      printJson(data);
+    });
+
+  batch
+    .command("release <ref>")
+    .description("Release a batch from its current sew line")
+    .action(async (ref: string) => {
+      const data = await request("POST", `/api/batches/${encodeURIComponent(ref)}/release-line`);
       printJson(data);
     });
 
