@@ -69,7 +69,11 @@ export async function receiveFromCutter(
         notes: input.notes ?? null,
       })
       .returning();
-    if (!batch) throw new Error("production_batch insert returned no row");
+    if (!batch)
+      throw new BusinessRuleError(
+        "insert_returned_no_row",
+        "production_batch insert returned no row",
+      );
 
     await writeEvent(tx, {
       batchId: batch.id,
@@ -143,7 +147,11 @@ export async function startProduction(
       })
       .where(eq(schema.productionBatches.id, before.id))
       .returning();
-    if (!after) throw new Error("production_batch update returned no row");
+    if (!after)
+      throw new BusinessRuleError(
+        "update_returned_no_row",
+        "production_batch update returned no row",
+      );
 
     await writeEvent(tx, {
       batchId: after.id,
@@ -201,7 +209,11 @@ export async function submitForQc(db: Database, input: SubmitForQcInput): Promis
       })
       .where(eq(schema.productionBatches.id, before.id))
       .returning();
-    if (!after) throw new Error("production_batch update returned no row");
+    if (!after)
+      throw new BusinessRuleError(
+        "update_returned_no_row",
+        "production_batch update returned no row",
+      );
 
     await writeEvent(tx, {
       batchId: after.id,
@@ -264,7 +276,11 @@ export async function completeBatch(
       })
       .where(eq(schema.productionBatches.id, before.id))
       .returning();
-    if (!after) throw new Error("production_batch update returned no row");
+    if (!after)
+      throw new BusinessRuleError(
+        "update_returned_no_row",
+        "production_batch update returned no row",
+      );
 
     await writeEvent(tx, {
       batchId: after.id,
@@ -315,7 +331,11 @@ export async function cancelBatch(db: Database, input: CancelBatchInput): Promis
       })
       .where(eq(schema.productionBatches.id, before.id))
       .returning();
-    if (!after) throw new Error("production_batch update returned no row");
+    if (!after)
+      throw new BusinessRuleError(
+        "update_returned_no_row",
+        "production_batch update returned no row",
+      );
 
     await writeEvent(tx, {
       batchId: after.id,
@@ -369,7 +389,11 @@ async function transition(
       .set(patch)
       .where(eq(schema.productionBatches.id, before.id))
       .returning();
-    if (!after) throw new Error("production_batch update returned no row");
+    if (!after)
+      throw new BusinessRuleError(
+        "update_returned_no_row",
+        "production_batch update returned no row",
+      );
 
     await writeEvent(tx, {
       batchId: after.id,

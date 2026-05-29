@@ -45,7 +45,10 @@ async function makeCompletedBatch(
 }
 
 function makePayload(orderId: string, lineItemId: string, sku: string, quantity: number) {
-  return { id: orderId, line_items: [{ id: lineItemId, sku, quantity }] } satisfies ShopifyOrderPayload;
+  return {
+    id: orderId,
+    line_items: [{ id: lineItemId, sku, quantity }],
+  } satisfies ShopifyOrderPayload;
 }
 
 describe("processOrderWebhook — FIFO mapping", () => {

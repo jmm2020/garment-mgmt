@@ -35,7 +35,8 @@ export async function createMaterial(
         notes: input.notes ?? null,
       })
       .returning();
-    if (!material) throw new Error("material insert returned no row");
+    if (!material)
+      throw new BusinessRuleError("insert_returned_no_row", "material insert returned no row");
     await recordAudit({
       db: tx,
       entityType: "material",
@@ -76,7 +77,11 @@ export async function addVariant(
         sizeSpec: input.sizeSpec ?? null,
       })
       .returning();
-    if (!variant) throw new Error("variant insert returned no row");
+    if (!variant)
+      throw new BusinessRuleError(
+        "insert_returned_no_row",
+        "material_variant insert returned no row",
+      );
 
     await recordAudit({
       db: tx,

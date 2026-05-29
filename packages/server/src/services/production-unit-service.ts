@@ -116,8 +116,7 @@ export async function recordUnitQcVerdict(
         `Unit ${input.unitSerial} already has a verdict (status=${unit.status})`,
       );
     }
-    const newStatus: ProductionUnitStatus =
-      input.verdict === "fail" ? "qc_rejected" : "qc_passed";
+    const newStatus: ProductionUnitStatus = input.verdict === "fail" ? "qc_rejected" : "qc_passed";
 
     const [after] = await tx
       .update(schema.productionUnits)
@@ -160,10 +159,7 @@ export async function recordUnitQcVerdict(
   });
 }
 
-export async function getUnit(
-  db: DbExecutor,
-  unitSerial: string,
-): Promise<UnitWithProvenance> {
+export async function getUnit(db: DbExecutor, unitSerial: string): Promise<UnitWithProvenance> {
   const [row] = await db
     .select({
       unit: schema.productionUnits,
@@ -175,10 +171,7 @@ export async function getUnit(
       schema.productionBatches,
       eq(schema.productionUnits.batchId, schema.productionBatches.id),
     )
-    .innerJoin(
-      schema.cutTickets,
-      eq(schema.productionBatches.cutTicketId, schema.cutTickets.id),
-    )
+    .innerJoin(schema.cutTickets, eq(schema.productionBatches.cutTicketId, schema.cutTickets.id))
     .where(eq(schema.productionUnits.unitSerial, unitSerial));
   if (!row) throw new NotFoundError("production_unit", unitSerial);
 

@@ -86,9 +86,7 @@ describe("updateMachineStatus", () => {
 
   it("throws NotFoundError for a non-existent machine", async () => {
     await withTestDb(async (db) => {
-      await expect(updateMachineStatus(db, 999999, "in_use")).rejects.toBeInstanceOf(
-        NotFoundError,
-      );
+      await expect(updateMachineStatus(db, 999999, "in_use")).rejects.toBeInstanceOf(NotFoundError);
     });
   });
 });

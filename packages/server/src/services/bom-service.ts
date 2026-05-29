@@ -52,7 +52,7 @@ export async function createBom(
         notes: input.notes ?? null,
       })
       .returning();
-    if (!bom) throw new Error("bom insert returned no row");
+    if (!bom) throw new BusinessRuleError("insert_returned_no_row", "bom insert returned no row");
 
     const components =
       input.components.length === 0
@@ -120,7 +120,8 @@ export async function addComponent(
         notes: draft.notes ?? null,
       })
       .returning();
-    if (!component) throw new Error("component insert returned no row");
+    if (!component)
+      throw new BusinessRuleError("insert_returned_no_row", "bom_component insert returned no row");
     await recordAudit({
       db: tx,
       entityType: "bom_component",

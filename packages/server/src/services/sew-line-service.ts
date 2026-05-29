@@ -35,7 +35,8 @@ export async function createSewLine(db: Database, input: CreateSewLineInput): Pr
         active: input.active ?? true,
       })
       .returning();
-    if (!line) throw new Error("sew_line insert returned no row");
+    if (!line)
+      throw new BusinessRuleError("insert_returned_no_row", "sew_line insert returned no row");
     await recordAudit({
       db: tx,
       entityType: "sew_line",
@@ -68,7 +69,8 @@ export async function addMachine(db: Database, input: AddMachineInput): Promise<
         status: input.status ?? "available",
       })
       .returning();
-    if (!machine) throw new Error("machine insert returned no row");
+    if (!machine)
+      throw new BusinessRuleError("insert_returned_no_row", "machine insert returned no row");
     await recordAudit({
       db: tx,
       entityType: "machine",
@@ -200,7 +202,11 @@ export async function assignBatchToLine(
       .set({ sewLineId: line.id, assignedAt: new Date(), updatedAt: new Date() })
       .where(eq(schema.productionBatches.id, before.id))
       .returning();
-    if (!after) throw new Error("production_batch update returned no row");
+    if (!after)
+      throw new BusinessRuleError(
+        "update_returned_no_row",
+        "production_batch update returned no row",
+      );
 
     await writeEvent(tx, {
       batchId: after.id,
@@ -246,7 +252,11 @@ export async function releaseBatchFromLine(
       .set({ sewLineId: null, assignedAt: null, updatedAt: new Date() })
       .where(eq(schema.productionBatches.id, before.id))
       .returning();
-    if (!after) throw new Error("production_batch update returned no row");
+    if (!after)
+      throw new BusinessRuleError(
+        "update_returned_no_row",
+        "production_batch update returned no row",
+      );
 
     await writeEvent(tx, {
       batchId: after.id,

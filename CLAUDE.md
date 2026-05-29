@@ -220,9 +220,9 @@ packages/server/src/
 
 ## Iteration roadmap
 
-| Iter | Theme                                            | Status       |
-| ---- | ------------------------------------------------ | ------------ |
-| 1    | Data layer, REST API, CLI, lot/cut foundation    | ✅ Merged (PR #1)         |
+| Iter | Theme                                            | Status                   |
+| ---- | ------------------------------------------------ | ------------------------ |
+| 1    | Data layer, REST API, CLI, lot/cut foundation    | ✅ Merged (PR #1)        |
 | 2    | Production batches, station tracking, Shopify FG | In progress (PRs #2–#11) |
-| 3    | React UI, real-time, sew/QC/finish/pack          | future       |
-| 4+   | CSV export, multi-facility, mobile, SAM costing  | future       |
+| 3    | React UI, real-time, sew/QC/finish/pack          | future                   |
+| 4+   | CSV export, multi-facility, mobile, SAM costing  | future                   |

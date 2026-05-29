@@ -68,7 +68,11 @@ export async function receivePoLine(
           defectsNotes: lot.defectsNotes ?? null,
         })
         .returning();
-      if (!created) throw new Error("lot insert returned no row");
+      if (!created)
+        throw new BusinessRuleError(
+          "insert_returned_no_row",
+          "material_lot insert returned no row",
+        );
       insertedLots.push(created);
       totalReceived += Number(lot.quantityReceived);
 
@@ -138,7 +142,8 @@ export async function receiveOffPo(
         defectsNotes: input.lot.defectsNotes ?? null,
       })
       .returning();
-    if (!created) throw new Error("lot insert returned no row");
+    if (!created)
+      throw new BusinessRuleError("insert_returned_no_row", "material_lot insert returned no row");
 
     await tx.insert(schema.lotMovements).values({
       lotId: created.id,

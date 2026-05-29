@@ -13,12 +13,12 @@ We need to close this gap before iter-3 ships a customer-facing warranty workflo
 
 Options evaluated:
 
-| Option | Verdict | Reason |
-| ------ | ------- | ------ |
-| **Status quo (batch-level only)** | Rejected | Leaves the warranty trail dead-ended; no path forward for iter-3 |
-| **External serialization in Shopify metafields** | Rejected | Cross-system source-of-truth split; can't be queried alongside the lot/cut-ticket chain |
-| **Per-unit rows in `production_batches`** | Rejected | Conflates batch (workflow state) with unit (physical object); inflates state-machine transitions |
-| **New `production_units` table** | **Accepted** | Additive; batch-level QC untouched; one row per physical garment; serial-indexed for warranty lookup |
+| Option                                           | Verdict      | Reason                                                                                               |
+| ------------------------------------------------ | ------------ | ---------------------------------------------------------------------------------------------------- |
+| **Status quo (batch-level only)**                | Rejected     | Leaves the warranty trail dead-ended; no path forward for iter-3                                     |
+| **External serialization in Shopify metafields** | Rejected     | Cross-system source-of-truth split; can't be queried alongside the lot/cut-ticket chain              |
+| **Per-unit rows in `production_batches`**        | Rejected     | Conflates batch (workflow state) with unit (physical object); inflates state-machine transitions     |
+| **New `production_units` table**                 | **Accepted** | Additive; batch-level QC untouched; one row per physical garment; serial-indexed for warranty lookup |
 
 ## Decision
 
@@ -41,11 +41,11 @@ Units are minted **at `startProduction`** (the `staged_pre_prod → in_productio
 
 Alternatives considered:
 
-| Trigger | Verdict | Reason |
-| ------- | ------- | ------ |
-| `receiveFromCutter` | Rejected | Too early — at receive, the bundles are still a planning artefact; no physical units exist |
-| `completeBatch` | Rejected | Too late — units physically exist the moment sewing begins; minting at completion blocks any iter-3 in-progress per-unit tracking |
-| `startProduction` | **Accepted** | Aligns with the moment units physically come into being on the floor |
+| Trigger             | Verdict      | Reason                                                                                                                            |
+| ------------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| `receiveFromCutter` | Rejected     | Too early — at receive, the bundles are still a planning artefact; no physical units exist                                        |
+| `completeBatch`     | Rejected     | Too late — units physically exist the moment sewing begins; minting at completion blocks any iter-3 in-progress per-unit tracking |
+| `startProduction`   | **Accepted** | Aligns with the moment units physically come into being on the floor                                                              |
 
 ### 3. Serial scheme
 

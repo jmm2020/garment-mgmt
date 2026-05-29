@@ -5,8 +5,8 @@
 ## Context
 
 Iteration 2 (ADR-0005) gives a production batch a flat `in_production` state. The
-`production_batches` table records *what* is being produced and *who* cut it, but nothing about
-*where* on the floor it runs. There is no model for:
+`production_batches` table records _what_ is being produced and _who_ cut it, but nothing about
+_where_ on the floor it runs. There is no model for:
 
 - which physical sew line a batch is running on,
 - what sew lines exist and how many units each can carry per day,
@@ -30,25 +30,25 @@ human staffing are deferred to separate issues.
 
 **`sew_lines`** — a physical production line on the floor.
 
-| Column                   | Notes                                                        |
-| ------------------------ | ----------------------------------------------------------- |
-| `id`                     | bigint PK                                                   |
-| `code`                   | unique, human-readable (e.g., `SL-A`). Printed on floor.    |
-| `name`                   | display name                                               |
-| `capacity_units_per_day` | integer — informational ceiling used by future scheduling   |
-| `active`                 | boolean · default true                                     |
-| `created_at`/`updated_at`| timestamps                                                 |
+| Column                    | Notes                                                     |
+| ------------------------- | --------------------------------------------------------- |
+| `id`                      | bigint PK                                                 |
+| `code`                    | unique, human-readable (e.g., `SL-A`). Printed on floor.  |
+| `name`                    | display name                                              |
+| `capacity_units_per_day`  | integer — informational ceiling used by future scheduling |
+| `active`                  | boolean · default true                                    |
+| `created_at`/`updated_at` | timestamps                                                |
 
 **`machines`** — a machine that lives on exactly one sew line.
 
-| Column         | Notes                                                            |
-| -------------- | --------------------------------------------------------------- |
-| `id`           | bigint PK                                                       |
-| `code`         | unique (e.g., `MC-001`)                                         |
-| `type`         | enum: `flatlock`, `coverstitch`, `single_needle`, `overlock`, `bartack`, `other` |
-| `sew_line_id`  | FK → `sew_lines` · `ON DELETE restrict`                         |
-| `status`       | enum: `available`, `in_use`, `maintenance` · default `available`|
-| `created_at`/`updated_at` | timestamps                                          |
+| Column                    | Notes                                                                            |
+| ------------------------- | -------------------------------------------------------------------------------- |
+| `id`                      | bigint PK                                                                        |
+| `code`                    | unique (e.g., `MC-001`)                                                          |
+| `type`                    | enum: `flatlock`, `coverstitch`, `single_needle`, `overlock`, `bartack`, `other` |
+| `sew_line_id`             | FK → `sew_lines` · `ON DELETE restrict`                                          |
+| `status`                  | enum: `available`, `in_use`, `maintenance` · default `available`                 |
+| `created_at`/`updated_at` | timestamps                                                                       |
 
 `machines.sew_line_id` uses `ON DELETE restrict`: a line cannot be deleted while machines still
 reference it. Machines must be removed (or re-homed) first. This keeps the floor topology
@@ -58,9 +58,9 @@ consistent and surfaces accidental deletes as an error rather than a silent casc
 
 `production_batches` gains two nullable columns:
 
-| Column        | Notes                                                                |
-| ------------- | ------------------------------------------------------------------- |
-| `sew_line_id` | FK → `sew_lines` · `ON DELETE set null` · nullable                  |
+| Column        | Notes                                                                  |
+| ------------- | ---------------------------------------------------------------------- |
+| `sew_line_id` | FK → `sew_lines` · `ON DELETE set null` · nullable                     |
 | `assigned_at` | timestamp · nullable · set when a line is assigned, cleared on release |
 
 Assigning a batch to a line does **not** change `status`. A batch stays `in_production` (or
