@@ -1,6 +1,6 @@
 import { schema, type Database, type DbExecutor } from "@garment-mgmt/db";
 import { eq, sql } from "drizzle-orm";
-import { BusinessRuleError, NotFoundError, ValidationFailedError } from "../errors.js";
+import { BusinessRuleError, InternalError, NotFoundError, ValidationFailedError } from "../errors.js";
 import { recordAudit } from "./audit-service.js";
 import { getPvtAuthorization, loadRun, type RunRef } from "./pvt-queries.js";
 
@@ -46,10 +46,7 @@ export async function createPvtRun(db: Database, input: CreatePvtRunInput): Prom
       })
       .returning();
     if (!run)
-      throw new BusinessRuleError(
-        "insert_returned_no_row",
-        "production_validation_run insert returned no row",
-      );
+      throw new InternalError("production_validation_run insert returned no row");
 
     await recordAudit({
       db: tx,
@@ -122,10 +119,7 @@ export async function validatePvt(db: Database, input: ValidatePvtInput): Promis
       .where(eq(schema.productionValidationRuns.id, before.id))
       .returning();
     if (!after)
-      throw new BusinessRuleError(
-        "update_returned_no_row",
-        "production_validation_run update returned no row",
-      );
+      throw new InternalError("production_validation_run update returned no row");
 
     await recordAudit({
       db: tx,
@@ -170,10 +164,7 @@ export async function rejectPvt(db: Database, input: RejectPvtInput): Promise<Ru
       .where(eq(schema.productionValidationRuns.id, before.id))
       .returning();
     if (!after)
-      throw new BusinessRuleError(
-        "update_returned_no_row",
-        "production_validation_run update returned no row",
-      );
+      throw new InternalError("production_validation_run update returned no row");
 
     await recordAudit({
       db: tx,
@@ -221,10 +212,7 @@ export async function cancelPvtRun(db: Database, input: CancelPvtInput): Promise
       .where(eq(schema.productionValidationRuns.id, before.id))
       .returning();
     if (!after)
-      throw new BusinessRuleError(
-        "update_returned_no_row",
-        "production_validation_run update returned no row",
-      );
+      throw new InternalError("production_validation_run update returned no row");
 
     await recordAudit({
       db: tx,
@@ -293,10 +281,7 @@ async function simpleTransition(
       .where(eq(schema.productionValidationRuns.id, before.id))
       .returning();
     if (!after)
-      throw new BusinessRuleError(
-        "update_returned_no_row",
-        "production_validation_run update returned no row",
-      );
+      throw new InternalError("production_validation_run update returned no row");
 
     await recordAudit({
       db: tx,

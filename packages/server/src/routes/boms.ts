@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { requireAuth } from "../auth/middleware.js";
+import { AuthError } from "../errors.js";
 import {
   activateBom,
   addComponent,
@@ -76,7 +77,7 @@ export async function registerBomRoutes(app: FastifyInstance): Promise<void> {
     { preHandler: requireAuth(["admin", "production_staff"]) },
     async (req) => {
       const id = Number((req.params as { id: string }).id);
-      if (!req.currentUser) throw new Error("missing user");
+      if (!req.currentUser) throw new AuthError("unauthorized", "session required");
       return approveBom(req.db, id, req.currentUser.id);
     },
   );
@@ -86,7 +87,7 @@ export async function registerBomRoutes(app: FastifyInstance): Promise<void> {
     { preHandler: requireAuth(["admin", "production_staff"]) },
     async (req) => {
       const id = Number((req.params as { id: string }).id);
-      if (!req.currentUser) throw new Error("missing user");
+      if (!req.currentUser) throw new AuthError("unauthorized", "session required");
       return activateBom(req.db, id, req.currentUser.id);
     },
   );

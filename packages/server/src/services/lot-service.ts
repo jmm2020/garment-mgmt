@@ -1,6 +1,6 @@
 import { schema, type Database } from "@garment-mgmt/db";
 import { eq } from "drizzle-orm";
-import { BusinessRuleError, NotFoundError, ValidationFailedError } from "../errors.js";
+import { BusinessRuleError, InternalError, NotFoundError, ValidationFailedError } from "../errors.js";
 import { recordAudit } from "./audit-service.js";
 import { recalculatePoStatus } from "./po-service.js";
 
@@ -69,10 +69,7 @@ export async function receivePoLine(
         })
         .returning();
       if (!created)
-        throw new BusinessRuleError(
-          "insert_returned_no_row",
-          "material_lot insert returned no row",
-        );
+        throw new InternalError("material_lot insert returned no row");
       insertedLots.push(created);
       totalReceived += Number(lot.quantityReceived);
 
@@ -143,7 +140,7 @@ export async function receiveOffPo(
       })
       .returning();
     if (!created)
-      throw new BusinessRuleError("insert_returned_no_row", "material_lot insert returned no row");
+      throw new InternalError("material_lot insert returned no row");
 
     await tx.insert(schema.lotMovements).values({
       lotId: created.id,

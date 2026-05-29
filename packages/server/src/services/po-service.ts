@@ -1,6 +1,6 @@
 import { schema, type Database, type DbExecutor } from "@garment-mgmt/db";
 import { eq, inArray, sql } from "drizzle-orm";
-import { BusinessRuleError, NotFoundError } from "../errors.js";
+import { BusinessRuleError, InternalError, NotFoundError } from "../errors.js";
 import { recordAudit } from "./audit-service.js";
 
 type Po = schema.PurchaseOrder;
@@ -34,10 +34,7 @@ export async function createPo(db: Database, input: CreatePoInput): Promise<Po> 
       })
       .returning();
     if (!po)
-      throw new BusinessRuleError(
-        "insert_returned_no_row",
-        "purchase_order insert returned no row",
-      );
+      throw new InternalError("purchase_order insert returned no row");
 
     await recordAudit({
       db: tx,
@@ -77,10 +74,7 @@ export async function addLine(db: Database, input: AddPoLineInput): Promise<PoLi
       })
       .returning();
     if (!line)
-      throw new BusinessRuleError(
-        "insert_returned_no_row",
-        "purchase_order_line insert returned no row",
-      );
+      throw new InternalError("purchase_order_line insert returned no row");
 
     await recordAudit({
       db: tx,

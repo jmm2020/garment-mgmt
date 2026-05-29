@@ -3,6 +3,7 @@ import {
   AuthError,
   BusinessRuleError,
   DomainError,
+  InternalError,
   NotFoundError,
   ValidationFailedError,
   isDomainError,
@@ -39,5 +40,24 @@ describe("DomainError hierarchy", () => {
   it("isDomainError rejects plain Error", () => {
     expect(isDomainError(new Error("plain"))).toBe(false);
     expect(isDomainError(new DomainError("x", "y"))).toBe(true);
+  });
+
+  it("InternalError is 500 with internal_error code", () => {
+    const err = new InternalError("vendor insert returned no row");
+    expect(err.status).toBe(500);
+    expect(err.code).toBe("internal_error");
+    expect(isDomainError(err)).toBe(true);
+  });
+
+  it("BusinessRuleError insert_returned_no_row slug has correct code", () => {
+    const err = new BusinessRuleError("insert_returned_no_row", "foo insert returned no row");
+    expect(err.code).toBe("rule.insert_returned_no_row");
+    expect(err.status).toBe(409);
+  });
+
+  it("BusinessRuleError update_returned_no_row slug has correct code", () => {
+    const err = new BusinessRuleError("update_returned_no_row", "foo update returned no row");
+    expect(err.code).toBe("rule.update_returned_no_row");
+    expect(err.status).toBe(409);
   });
 });

@@ -1,6 +1,6 @@
 import { schema, type Database } from "@garment-mgmt/db";
 import { and, desc, eq, gt, or } from "drizzle-orm";
-import { BusinessRuleError, NotFoundError } from "../errors.js";
+import { BusinessRuleError, InternalError, NotFoundError } from "../errors.js";
 import { recordAudit } from "./audit-service.js";
 
 export interface CreateMaterialInput {
@@ -36,7 +36,7 @@ export async function createMaterial(
       })
       .returning();
     if (!material)
-      throw new BusinessRuleError("insert_returned_no_row", "material insert returned no row");
+      throw new InternalError("material insert returned no row");
     await recordAudit({
       db: tx,
       entityType: "material",
@@ -78,10 +78,7 @@ export async function addVariant(
       })
       .returning();
     if (!variant)
-      throw new BusinessRuleError(
-        "insert_returned_no_row",
-        "material_variant insert returned no row",
-      );
+      throw new InternalError("material_variant insert returned no row");
 
     await recordAudit({
       db: tx,

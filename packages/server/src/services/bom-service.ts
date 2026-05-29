@@ -1,6 +1,6 @@
 import { schema, type Database, type DbExecutor } from "@garment-mgmt/db";
 import { and, desc, eq, max } from "drizzle-orm";
-import { BusinessRuleError, NotFoundError } from "../errors.js";
+import { BusinessRuleError, InternalError, NotFoundError } from "../errors.js";
 import { recordAudit } from "./audit-service.js";
 
 type Bom = schema.Bom;
@@ -52,7 +52,7 @@ export async function createBom(
         notes: input.notes ?? null,
       })
       .returning();
-    if (!bom) throw new BusinessRuleError("insert_returned_no_row", "bom insert returned no row");
+    if (!bom) throw new InternalError("bom insert returned no row");
 
     const components =
       input.components.length === 0
@@ -121,7 +121,7 @@ export async function addComponent(
       })
       .returning();
     if (!component)
-      throw new BusinessRuleError("insert_returned_no_row", "bom_component insert returned no row");
+      throw new InternalError("bom_component insert returned no row");
     await recordAudit({
       db: tx,
       entityType: "bom_component",

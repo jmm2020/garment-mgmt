@@ -1,6 +1,6 @@
 import { schema, type Database } from "@garment-mgmt/db";
 import { and, desc, eq, gt, or } from "drizzle-orm";
-import { BusinessRuleError, NotFoundError } from "../errors.js";
+import { InternalError, NotFoundError } from "../errors.js";
 import { recordAudit } from "./audit-service.js";
 
 type Vendor = schema.Vendor;
@@ -33,7 +33,7 @@ export async function createVendor(db: Database, input: CreateVendorInput): Prom
       })
       .returning();
     if (!vendor)
-      throw new BusinessRuleError("insert_returned_no_row", "vendor insert returned no row");
+      throw new InternalError("vendor insert returned no row");
     await recordAudit({
       db: tx,
       entityType: "vendor",

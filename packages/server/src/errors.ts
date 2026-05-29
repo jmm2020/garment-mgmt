@@ -35,6 +35,12 @@ export class AuthError extends DomainError {
   }
 }
 
+export class InternalError extends DomainError {
+  constructor(message: string, details?: unknown) {
+    super("internal_error", message, 500, details);
+  }
+}
+
 export function isDomainError(err: unknown): err is DomainError {
   return err instanceof DomainError;
 }
