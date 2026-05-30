@@ -328,8 +328,10 @@ Verify with the smoke test in §5 after restore.
 
 **`INVENTREE_BASE_URL` trailing slash**
 
-The `inventree-client.ts` uses `new URL(path, baseUrl)` for path construction. Include no
-trailing slash in `INVENTREE_BASE_URL`:
+The smoke-test and token-generation curl commands in this runbook use shell string
+interpolation (`"${INVENTREE_BASE_URL}/api/"`). A trailing slash produces a double-slash
+(`http://localhost:8088//api/`) that some HTTP servers reject. Include no trailing slash
+in `INVENTREE_BASE_URL`:
 
 ```bash
 # Correct
@@ -398,7 +400,7 @@ tag.
 | Auth header           | `Authorization: Token ${INVENTREE_API_TOKEN}`  |
 | InvenTree Postgres    | `localhost:5433` / db `inventree` / user `inventree` |
 | Redis                 | `localhost:6379`                               |
-| Hub REST endpoints    | `POST /api/stock/`, `POST /api/stock/remove/`, `GET /api/part/`, `POST /api/part/` |
+| Hub REST endpoints    | `GET /api/stock/`, `POST /api/stock/`, `POST /api/stock/remove/`, `GET /api/part/`, `POST /api/part/` |
 | Compose file          | `docker-compose.inventree.yml` (standalone, not the Hub's `docker-compose.yml`) |
 | Bootstrap command     | `docker compose -f docker-compose.inventree.yml exec inventree-web invoke update` |
 | ADR reference         | [ADR-0006](../adr/0006-inventree-for-raw-materials.md) |
