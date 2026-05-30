@@ -208,6 +208,7 @@ Errors are emitted by the central handler with stable shape:
 | Runbook                                                           | When to use                          |
 | ----------------------------------------------------------------- | ------------------------------------ |
 | [Shopify token rotation](docs/runbooks/shopify-token-rotation.md) | Annual `SHOPIFY_ADMIN_TOKEN` renewal |
+| [InvenTree self-host setup](docs/runbooks/inventree-self-host.md) | Stand up InvenTree Docker instance before wiring the InvenTree client |
 
 ## Testing
 
