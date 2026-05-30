@@ -96,69 +96,69 @@ scripts/      One-time setup (e.g., init-test-db.sql)
 
 Session is persisted to `~/.garment-mgmt/session` after login.
 
-| Command                                               | Notes                                                               |
-| ----------------------------------------------------- | ------------------------------------------------------------------- |
-| `gm login <email> --password <pw>`                    | Authenticate; writes session token                                  |
-| `gm logout`                                           | Drop session                                                        |
-| `gm vendors list`                                     | List vendors                                                        |
-| `gm materials list`                                   | List materials                                                      |
-| `gm po list`                                          | List purchase orders                                                |
-| `gm po show <id>`                                     | PO with lines                                                       |
-| `gm po receive <lineId>`                              | Receive lots — stdin: `{"lots":[...]}`                              |
-| `gm bom show <id>`                                    | BOM with components                                                 |
-| `gm ct list`                                          | List cut tickets                                                    |
-| `gm ct create`                                        | Create cut ticket — stdin: JSON body                                |
-| `gm ct show <id>`                                     | Cut ticket with allocations                                         |
-| `gm ct close <id>`                                    | Close ticket — stdin: `{"actuals":[...]}`                           |
-| `gm lot provenance <id>`                              | Walk lot → PO line → PO → vendor + movements                        |
-| `gm batch list [--status <s>]`                        | List batches, optionally filtered by status                         |
-| `gm batch show <batchNoOrId>`                         | Show batch with events                                              |
-| `gm batch stage <batchNo>`                            | Advance to `staged_pre_prod`                                        |
-| `gm batch start <batchNo>`                            | Advance to `in_production`                                          |
-| `gm batch submit-qc <batchNo> --qty <n>`              | Submit for QC                                                       |
-| `gm batch complete <batchNo> --qty <n> --verdict <v>` | Complete batch; triggers Shopify inventory push                     |
-| `gm batch cancel <batchNo> --reason <r>`              | Cancel batch                                                        |
-| `gm batch find <batchNo>`                             | Forensic lookup by `PB-YYYY-####`                                   |
-| `gm batch find --order <shopifyOrderId>`              | Reverse lookup: Shopify order → batches + cut tickets + fabric lots |
-| `gm batch assign <batchNo> --line <id>`               | Assign a production batch to a sew line                             |
-| `gm batch release <batchNo>`                          | Release a production batch from its sew line                        |
-| `gm line list`                                        | List all sew lines with machine counts                              |
-| `gm line show <id>`                                   | Show sew line detail including machines                             |
-| `gm line load <id> --date YYYY-MM-DD`                 | Show planned load for a line on a given date                        |
-| **`gm pvt`**                                          | **Production Validation Testing commands**                          |
-| `gm pvt create --variant <id> --marker <id> --cutter <userId> --cut-ticket <id> [--notes <n>]` | Create a new PVT run (cut ticket must have `kind='pvt'`) |
-| `gm pvt list [--status <s>] [--variant <id>] [--active-only]` | List PVT runs; `--active-only` filters to authorized/in-progress    |
-| `gm pvt show <ref>`                                   | Show a PVT run by id or `PVT-YYYY-####`                             |
-| `gm pvt ship <ref>`                                   | Advance: `cutting → shipped`                                        |
-| `gm pvt receive <ref>`                                | Advance: `shipped → inspecting`                                     |
-| `gm pvt validate <ref> [--notes <n>]`                 | Advance: `inspecting → validated` (opens the production gate)       |
-| `gm pvt reject <ref> --reason <r>`                    | Advance: `inspecting → rejected` (must cut a new PVT)               |
-| `gm pvt cancel <ref> --reason <r>`                    | Cancel a non-terminal PVT run                                       |
-| `gm pvt status <variantId> --marker <id>`             | Check (variant, marker) authorization for production                |
-| **`gm unit`**                                         | **Production unit commands**                                        |
-| `gm unit show <serial>`                               | Show unit provenance by serial number                               |
-| `gm unit list <batchId> [--verdict <v>]`              | List units for a batch; `--verdict` filters by `pass\|fail\|pass_with_notes` |
-| `gm unit qc <batchId> <serial> --verdict <v> [--reason <r>]` | Record per-unit QC verdict                                   |
+| Command                                                                                        | Notes                                                                        |
+| ---------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `gm login <email> --password <pw>`                                                             | Authenticate; writes session token                                           |
+| `gm logout`                                                                                    | Drop session                                                                 |
+| `gm vendors list`                                                                              | List vendors                                                                 |
+| `gm materials list`                                                                            | List materials                                                               |
+| `gm po list`                                                                                   | List purchase orders                                                         |
+| `gm po show <id>`                                                                              | PO with lines                                                                |
+| `gm po receive <lineId>`                                                                       | Receive lots — stdin: `{"lots":[...]}`                                       |
+| `gm bom show <id>`                                                                             | BOM with components                                                          |
+| `gm ct list`                                                                                   | List cut tickets                                                             |
+| `gm ct create`                                                                                 | Create cut ticket — stdin: JSON body                                         |
+| `gm ct show <id>`                                                                              | Cut ticket with allocations                                                  |
+| `gm ct close <id>`                                                                             | Close ticket — stdin: `{"actuals":[...]}`                                    |
+| `gm lot provenance <id>`                                                                       | Walk lot → PO line → PO → vendor + movements                                 |
+| `gm batch list [--status <s>]`                                                                 | List batches, optionally filtered by status                                  |
+| `gm batch show <batchNoOrId>`                                                                  | Show batch with events                                                       |
+| `gm batch stage <batchNo>`                                                                     | Advance to `staged_pre_prod`                                                 |
+| `gm batch start <batchNo>`                                                                     | Advance to `in_production`                                                   |
+| `gm batch submit-qc <batchNo> --qty <n>`                                                       | Submit for QC                                                                |
+| `gm batch complete <batchNo> --qty <n> --verdict <v>`                                          | Complete batch; triggers Shopify inventory push                              |
+| `gm batch cancel <batchNo> --reason <r>`                                                       | Cancel batch                                                                 |
+| `gm batch find <batchNo>`                                                                      | Forensic lookup by `PB-YYYY-####`                                            |
+| `gm batch find --order <shopifyOrderId>`                                                       | Reverse lookup: Shopify order → batches + cut tickets + fabric lots          |
+| `gm batch assign <batchNo> --line <id>`                                                        | Assign a production batch to a sew line                                      |
+| `gm batch release <batchNo>`                                                                   | Release a production batch from its sew line                                 |
+| `gm line list`                                                                                 | List all sew lines with machine counts                                       |
+| `gm line show <id>`                                                                            | Show sew line detail including machines                                      |
+| `gm line load <id> --date YYYY-MM-DD`                                                          | Show planned load for a line on a given date                                 |
+| **`gm pvt`**                                                                                   | **Production Validation Testing commands**                                   |
+| `gm pvt create --variant <id> --marker <id> --cutter <userId> --cut-ticket <id> [--notes <n>]` | Create a new PVT run (cut ticket must have `kind='pvt'`)                     |
+| `gm pvt list [--status <s>] [--variant <id>] [--active-only]`                                  | List PVT runs; `--active-only` filters to authorized/in-progress             |
+| `gm pvt show <ref>`                                                                            | Show a PVT run by id or `PVT-YYYY-####`                                      |
+| `gm pvt ship <ref>`                                                                            | Advance: `cutting → shipped`                                                 |
+| `gm pvt receive <ref>`                                                                         | Advance: `shipped → inspecting`                                              |
+| `gm pvt validate <ref> [--notes <n>]`                                                          | Advance: `inspecting → validated` (opens the production gate)                |
+| `gm pvt reject <ref> --reason <r>`                                                             | Advance: `inspecting → rejected` (must cut a new PVT)                        |
+| `gm pvt cancel <ref> --reason <r>`                                                             | Cancel a non-terminal PVT run                                                |
+| `gm pvt status <variantId> --marker <id>`                                                      | Check (variant, marker) authorization for production                         |
+| **`gm unit`**                                                                                  | **Production unit commands**                                                 |
+| `gm unit show <serial>`                                                                        | Show unit provenance by serial number                                        |
+| `gm unit list <batchId> [--verdict <v>]`                                                       | List units for a batch; `--verdict` filters by `pass\|fail\|pass_with_notes` |
+| `gm unit qc <batchId> <serial> --verdict <v> [--reason <r>]`                                   | Record per-unit QC verdict                                                   |
 
 ## HTTP API
 
 Mounted under `/` from `packages/server/src/routes/`. All mutating endpoints require an active session cookie / bearer (set by `POST /auth/login`).
 
-| Resource      | Routes                                                                                                                                                                                                          |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `auth`        | `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`                                                                                                                                                         |
-| `vendors`     | `GET/POST /vendors`, `GET /vendors/:id`                                                                                                                                                                         |
-| `materials`   | `GET/POST /materials`, `GET /materials/:id`, `POST /materials/:id/variants`                                                                                                                                     |
-| `products`    | `GET/POST /products`, `GET /products/:id`, `POST /products/:id/variants`                                                                                                                                        |
-| `pos` (POs)   | `GET/POST /pos`, `GET /pos/:id`, `POST /pos/:id/send`, `POST /pos/:id/confirm`                                                                                                                                  |
-| `lots`        | `GET /lots/:id`, `GET /lots/:id/provenance`, `POST /pos/:lineId/receive`                                                                                                                                        |
-| `boms`        | `GET/POST /boms`, `POST /boms/:id/approve`, `POST /boms/:id/activate`                                                                                                                                           |
-| `cut-tickets` | `GET/POST /cut-tickets`, `POST /cut-tickets/:id/mark-cutting`, `…/close`, `…/cancel`                                                                                                                            |
-| `batches`     | `GET/POST /api/batches`, `GET /api/batches/by-order?order=<id>`, `GET /api/batches/:ref`, `POST /api/batches/:ref/stage`, `…/start`, `…/submit-qc`, `…/complete`, `…/cancel`, `…/assign-line`, `…/release-line` |
-| `sew-lines`   | `GET /api/sew-lines`, `GET /api/sew-lines/:id`, `GET /api/sew-lines/:id/load?date=YYYY-MM-DD`, `POST /api/sew-lines`, `POST /api/sew-lines/:id/machines`, `PATCH /api/sew-lines/:id/machines/:machineId`        |
+| Resource      | Routes                                                                                                                                                                                                                                              |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `auth`        | `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`                                                                                                                                                                                             |
+| `vendors`     | `GET/POST /vendors`, `GET /vendors/:id`                                                                                                                                                                                                             |
+| `materials`   | `GET/POST /materials`, `GET /materials/:id`, `POST /materials/:id/variants`                                                                                                                                                                         |
+| `products`    | `GET/POST /products`, `GET /products/:id`, `POST /products/:id/variants`                                                                                                                                                                            |
+| `pos` (POs)   | `GET/POST /pos`, `GET /pos/:id`, `POST /pos/:id/send`, `POST /pos/:id/confirm`                                                                                                                                                                      |
+| `lots`        | `GET /lots/:id`, `GET /lots/:id/provenance`, `POST /pos/:lineId/receive`                                                                                                                                                                            |
+| `boms`        | `GET/POST /boms`, `POST /boms/:id/approve`, `POST /boms/:id/activate`                                                                                                                                                                               |
+| `cut-tickets` | `GET/POST /cut-tickets`, `POST /cut-tickets/:id/mark-cutting`, `…/close`, `…/cancel`                                                                                                                                                                |
+| `batches`     | `GET/POST /api/batches`, `GET /api/batches/by-order?order=<id>`, `GET /api/batches/:ref`, `POST /api/batches/:ref/stage`, `…/start`, `…/submit-qc`, `…/complete`, `…/cancel`, `…/assign-line`, `…/release-line`                                     |
+| `sew-lines`   | `GET /api/sew-lines`, `GET /api/sew-lines/:id`, `GET /api/sew-lines/:id/load?date=YYYY-MM-DD`, `POST /api/sew-lines`, `POST /api/sew-lines/:id/machines`, `PATCH /api/sew-lines/:id/machines/:machineId`                                            |
 | `pvt`         | `GET/POST /api/pvt`, `GET /api/pvt/:ref`, `POST /api/pvt/:ref/ship`, `POST /api/pvt/:ref/receive`, `POST /api/pvt/:ref/validate`, `POST /api/pvt/:ref/reject`, `POST /api/pvt/:ref/cancel`, `GET /api/products/:variantId/pvt-status?markerId=<id>` |
-| `units`       | `GET /api/units/:serial`, `GET /api/batches/:batchId/units`, `POST /api/batches/:batchId/units/:serial/qc`                                                                                                      |
-| `webhooks`    | `POST /webhooks/orders` (Shopify `orders/create` — HMAC-verified when `SHOPIFY_WEBHOOK_SECRET` is set; no session auth required)                                                                                |
+| `units`       | `GET /api/units/:serial`, `GET /api/batches/:batchId/units`, `POST /api/batches/:batchId/units/:serial/qc`                                                                                                                                          |
+| `webhooks`    | `POST /webhooks/orders` (Shopify `orders/create` — HMAC-verified when `SHOPIFY_WEBHOOK_SECRET` is set; no session auth required)                                                                                                                    |
 
 Errors are emitted by the central handler with stable shape:
 
@@ -184,12 +184,12 @@ Errors are emitted by the central handler with stable shape:
 
 **Iteration 2 — Shopify outbound push** (required when pushing FG inventory to Shopify):
 
-| Variable                    | Purpose                                                                                                                                        |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SHOPIFY_SHOP_DOMAIN`       | `your-shop.myshopify.com`                                                                                                                      |
-| `SHOPIFY_ADMIN_TOKEN`       | Custom-app Admin API access token. Required scopes: `write_inventory`, `read_inventory`, `read_products`, `read_locations`, `write_metafields` |
-| `SHOPIFY_LOCATION_ID`       | Shopify location to adjust inventory against                                                                                                   |
-| `SHOPIFY_PUSH_INTERVAL_MS`  | Polling interval for the Shopify inventory push job (default `30000` ms). Set lower in staging; `NODE_ENV=test` bypasses network regardless.   |
+| Variable                   | Purpose                                                                                                                                        |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SHOPIFY_SHOP_DOMAIN`      | `your-shop.myshopify.com`                                                                                                                      |
+| `SHOPIFY_ADMIN_TOKEN`      | Custom-app Admin API access token. Required scopes: `write_inventory`, `read_inventory`, `read_products`, `read_locations`, `write_metafields` |
+| `SHOPIFY_LOCATION_ID`      | Shopify location to adjust inventory against                                                                                                   |
+| `SHOPIFY_PUSH_INTERVAL_MS` | Polling interval for the Shopify inventory push job (default `30000` ms). Set lower in staging; `NODE_ENV=test` bypasses network regardless.   |
 
 **Iteration 2 — Shopify inbound webhook** (required for order → batch reverse lookup):
 
@@ -199,15 +199,15 @@ Errors are emitted by the central handler with stable shape:
 
 **Iteration 2 — PVT validity** (optional; controls how long a validated PVT authorizes production):
 
-| Variable                      | Purpose                                                                                                               |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Variable                      | Purpose                                                                                                                       |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `PVT_DEFAULT_VALIDITY_MONTHS` | How many months a validated PVT authorizes production (default `6`). Per-product override via `products.pvt_validity_months`. |
 
 ## Operational Runbooks
 
-| Runbook                                                           | When to use                          |
-| ----------------------------------------------------------------- | ------------------------------------ |
-| [Shopify token rotation](docs/runbooks/shopify-token-rotation.md) | Annual `SHOPIFY_ADMIN_TOKEN` renewal |
+| Runbook                                                           | When to use                                                           |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------- |
+| [Shopify token rotation](docs/runbooks/shopify-token-rotation.md) | Annual `SHOPIFY_ADMIN_TOKEN` renewal                                  |
 | [InvenTree self-host setup](docs/runbooks/inventree-self-host.md) | Stand up InvenTree Docker instance before wiring the InvenTree client |
 
 ## Testing
@@ -235,12 +235,12 @@ The `withTestDb(cb)` helper (`packages/server/test/helpers/test-db.ts`) wraps ea
 
 ## Roadmap
 
-| Iteration | Scope                                                                                                                                          | Status                                      |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| **1**     | Data layer, services, REST API, CLI, lot provenance, cut-ticket flow (cut-only)                                                                | shipped — PR #1 (foundation)                |
-| **2**     | Production batches (PB-YYYY-####), per-unit tracking, PVT, structured SKUs, Shopify inventory push, sew-line capacity + machine assignment     | shipped — PR #2 (production tracking + PVT) |
-| **3**     | React UI, real-time push (WS/SSE), sew/QC/finish/pack workflow                                                                                 | future                                      |
-| **4+**    | CSV export, multi-facility, native mobile, SAM-based costing                                                                                   | future                                      |
+| Iteration | Scope                                                                                                                                      | Status                                      |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| **1**     | Data layer, services, REST API, CLI, lot provenance, cut-ticket flow (cut-only)                                                            | shipped — PR #1 (foundation)                |
+| **2**     | Production batches (PB-YYYY-####), per-unit tracking, PVT, structured SKUs, Shopify inventory push, sew-line capacity + machine assignment | shipped — PR #2 (production tracking + PVT) |
+| **3**     | React UI, real-time push (WS/SSE), sew/QC/finish/pack workflow                                                                             | future                                      |
+| **4+**    | CSV export, multi-facility, native mobile, SAM-based costing                                                                               | future                                      |
 
 ## Out of scope (iterations 3+)
 

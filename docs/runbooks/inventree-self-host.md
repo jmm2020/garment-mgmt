@@ -36,11 +36,11 @@ container. This runbook covers the one-time setup of that InvenTree instance.
 The following ports must be free on the host. The 30xx range is deliberately avoided because
 the Production Hub server runs on 3000.
 
-| Service             | Host port | Container port |
-| ------------------- | --------- | -------------- |
-| InvenTree web UI    | 8088      | 8000           |
-| InvenTree Postgres  | 5433      | 5432           |
-| Redis               | 6379      | 6379           |
+| Service            | Host port | Container port |
+| ------------------ | --------- | -------------- |
+| InvenTree web UI   | 8088      | 8000           |
+| InvenTree Postgres | 5433      | 5432           |
+| Redis              | 6379      | 6379           |
 
 Check availability before proceeding:
 
@@ -139,11 +139,11 @@ volumes:
 
 **Volume layout**
 
-| Volume           | Contains                                              |
-| ---------------- | ----------------------------------------------------- |
-| `inventree_data` | InvenTree media files (uploaded attachments, reports) |
-| `inventree_db`   | InvenTree Postgres data directory                     |
-| `inventree_redis`| Redis persistence files                               |
+| Volume            | Contains                                              |
+| ----------------- | ----------------------------------------------------- |
+| `inventree_data`  | InvenTree media files (uploaded attachments, reports) |
+| `inventree_db`    | InvenTree Postgres data directory                     |
+| `inventree_redis` | Redis persistence files                               |
 
 ---
 
@@ -248,12 +248,12 @@ curl -s \
 
 **Failure cases**
 
-| Symptom                              | Likely cause                                                    |
-| ------------------------------------ | --------------------------------------------------------------- |
-| `connection refused`                 | Container not yet started or port mapping wrong                 |
-| `HTTP 403 Forbidden`                 | Token not set, wrong token, or trailing whitespace in env var   |
-| `jq: error (null input)`             | InvenTree returning non-JSON; check `docker compose -f docker-compose.inventree.yml logs inventree-web` |
-| Container exits immediately          | Postgres/Redis healthcheck not passing; `docker compose ps` to verify |
+| Symptom                     | Likely cause                                                                                            |
+| --------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `connection refused`        | Container not yet started or port mapping wrong                                                         |
+| `HTTP 403 Forbidden`        | Token not set, wrong token, or trailing whitespace in env var                                           |
+| `jq: error (null input)`    | InvenTree returning non-JSON; check `docker compose -f docker-compose.inventree.yml logs inventree-web` |
+| Container exits immediately | Postgres/Redis healthcheck not passing; `docker compose ps` to verify                                   |
 
 Test the two endpoints the Hub client uses directly:
 
@@ -392,16 +392,16 @@ tag.
 
 ## Quick reference
 
-| Item                  | Value                                          |
-| --------------------- | ---------------------------------------------- |
-| InvenTree web UI      | `http://localhost:8088`                        |
-| Env var — base URL    | `INVENTREE_BASE_URL=http://localhost:8088`     |
-| Env var — API token   | `INVENTREE_API_TOKEN=<token>`                  |
-| Auth header           | `Authorization: Token ${INVENTREE_API_TOKEN}`  |
-| InvenTree Postgres    | `localhost:5433` / db `inventree` / user `inventree` |
-| Redis                 | `localhost:6379`                               |
+| Item                  | Value                                                                                                 |
+| --------------------- | ----------------------------------------------------------------------------------------------------- |
+| InvenTree web UI      | `http://localhost:8088`                                                                               |
+| Env var — base URL    | `INVENTREE_BASE_URL=http://localhost:8088`                                                            |
+| Env var — API token   | `INVENTREE_API_TOKEN=<token>`                                                                         |
+| Auth header           | `Authorization: Token ${INVENTREE_API_TOKEN}`                                                         |
+| InvenTree Postgres    | `localhost:5433` / db `inventree` / user `inventree`                                                  |
+| Redis                 | `localhost:6379`                                                                                      |
 | Hub REST endpoints    | `GET /api/stock/`, `POST /api/stock/`, `POST /api/stock/remove/`, `GET /api/part/`, `POST /api/part/` |
-| Compose file          | `docker-compose.inventree.yml` (standalone, not the Hub's `docker-compose.yml`) |
-| Bootstrap command     | `docker compose -f docker-compose.inventree.yml exec inventree-web invoke update` |
-| ADR reference         | [ADR-0006](../adr/0006-inventree-for-raw-materials.md) |
-| InvenTree Docker docs | https://docs.inventree.org/en/latest/start/docker/ |
+| Compose file          | `docker-compose.inventree.yml` (standalone, not the Hub's `docker-compose.yml`)                       |
+| Bootstrap command     | `docker compose -f docker-compose.inventree.yml exec inventree-web invoke update`                     |
+| ADR reference         | [ADR-0006](../adr/0006-inventree-for-raw-materials.md)                                                |
+| InvenTree Docker docs | https://docs.inventree.org/en/latest/start/docker/                                                    |
