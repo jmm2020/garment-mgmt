@@ -32,8 +32,7 @@ export async function createVendor(db: Database, input: CreateVendorInput): Prom
         country: input.country ?? null,
       })
       .returning();
-    if (!vendor)
-      throw new InternalError("vendor insert returned no row");
+    if (!vendor) throw new InternalError("vendor insert returned no row");
     await recordAudit({
       db: tx,
       entityType: "vendor",

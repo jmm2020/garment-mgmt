@@ -167,6 +167,9 @@ packages/server/src/
     sew-line-service.ts           ← createSewLine, addMachine, updateMachineStatus,
                                      assignBatchToLine, releaseBatchFromLine,
                                      listSewLines, getSewLine, getLineLoad
+  integrations/
+    inventree-client.ts    ← listStock, receiveStock, consumeStock, findOrCreatePart
+    shopify-client.ts      ← Shopify webhook + inventory push client
   routes/                  ← One file per resource. Routes are Zod-validated thin wrappers.
   routes/sew-lines.ts      ← CRUD + machine management + load query
   routes/webhooks.ts       ← POST /webhooks/orders (Shopify orders/create, HMAC-gated)

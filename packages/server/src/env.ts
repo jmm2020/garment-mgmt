@@ -16,6 +16,10 @@ const envSchema = z.object({
   // (CI / local dev). Production deployments must set this to match the Shopify app
   // webhook secret.
   SHOPIFY_WEBHOOK_SECRET: z.string().optional(),
+  // InvenTree raw-materials API (iteration 2+). Absent => stock sync disabled.
+  // BASE_URL is validated as a URL so a malformed value fails fast at startup.
+  INVENTREE_BASE_URL: z.string().url().optional(),
+  INVENTREE_API_TOKEN: z.string().optional(),
   // Per-product override lives on products.pvt_validity_months; this is the fallback.
   PVT_DEFAULT_VALIDITY_MONTHS: z.coerce.number().int().positive().default(6),
 });
