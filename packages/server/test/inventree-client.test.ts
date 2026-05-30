@@ -122,9 +122,9 @@ describe("listStock", () => {
   it("throws InternalError when baseUrl not set", async () => {
     const fetchImpl = vi.fn();
 
-    await expect(
-      listStock({ ...baseCfg, baseUrl: undefined, fetchImpl }),
-    ).rejects.toBeInstanceOf(InternalError);
+    await expect(listStock({ ...baseCfg, baseUrl: undefined, fetchImpl })).rejects.toBeInstanceOf(
+      InternalError,
+    );
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 });
@@ -139,7 +139,7 @@ describe("receiveStock", () => {
 
     expect(typeof result.pk).toBe("number");
     const call = fetchImpl.mock.calls[0]!;
-    expect((call[0] as string)).toContain("/api/stock/");
+    expect(call[0] as string).toContain("/api/stock/");
     expect((call[1] as RequestInit).method).toBe("POST");
     const body = bodyOf(call);
     expect(body["part"]).toBe(1);

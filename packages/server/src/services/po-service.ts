@@ -33,8 +33,7 @@ export async function createPo(db: Database, input: CreatePoInput): Promise<Po> 
         notes: input.notes ?? null,
       })
       .returning();
-    if (!po)
-      throw new InternalError("purchase_order insert returned no row");
+    if (!po) throw new InternalError("purchase_order insert returned no row");
 
     await recordAudit({
       db: tx,
@@ -73,8 +72,7 @@ export async function addLine(db: Database, input: AddPoLineInput): Promise<PoLi
         notes: input.notes ?? null,
       })
       .returning();
-    if (!line)
-      throw new InternalError("purchase_order_line insert returned no row");
+    if (!line) throw new InternalError("purchase_order_line insert returned no row");
 
     await recordAudit({
       db: tx,

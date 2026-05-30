@@ -120,8 +120,7 @@ export async function addComponent(
         notes: draft.notes ?? null,
       })
       .returning();
-    if (!component)
-      throw new InternalError("bom_component insert returned no row");
+    if (!component) throw new InternalError("bom_component insert returned no row");
     await recordAudit({
       db: tx,
       entityType: "bom_component",
