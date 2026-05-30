@@ -29,9 +29,13 @@ async function main(): Promise<void> {
     "shopify push loop started",
   );
 
-  process.on("SIGTERM", () => {
+  const shutdown = async () => {
     pushHandle.stop();
-  });
+    await Promise.all([pushHandle.promise, app.close()]);
+    process.exit(0);
+  };
+  process.on("SIGTERM", () => void shutdown());
+  process.on("SIGINT", () => void shutdown());
 
   try {
     await app.listen({ port: config.PORT, host: "0.0.0.0" });
