@@ -72,7 +72,6 @@ old one stays valid until you explicitly revoke it (see §5).
    occasionally moves between Admin versions.)
 
 2. Confirm the app still grants the required scopes (verbatim from `.env.example`):
-
    - `write_inventory`
    - `read_inventory`
    - `read_products`
@@ -193,12 +192,12 @@ errors after the cutover.
 
 ## Quick reference
 
-| Item | Value |
-|------|-------|
-| Env var | `SHOPIFY_ADMIN_TOKEN` (prefix `shpat_`) |
-| Companion vars | `SHOPIFY_SHOP_DOMAIN`, `SHOPIFY_LOCATION_ID` |
-| GraphQL endpoint | `https://${SHOPIFY_SHOP_DOMAIN}/admin/api/2024-10/graphql.json` |
-| Auth header | `X-Shopify-Access-Token: ${SHOPIFY_ADMIN_TOKEN}` |
-| Required scopes | `write_inventory`, `read_inventory`, `read_products`, `read_locations`, `write_metafields` |
-| Push interval | `SHOPIFY_PUSH_INTERVAL_MS` (default 30 s) |
-| Rollback | Revert env var + redeploy; old token valid until manually revoked |
+| Item             | Value                                                                                      |
+| ---------------- | ------------------------------------------------------------------------------------------ |
+| Env var          | `SHOPIFY_ADMIN_TOKEN` (prefix `shpat_`)                                                    |
+| Companion vars   | `SHOPIFY_SHOP_DOMAIN`, `SHOPIFY_LOCATION_ID`                                               |
+| GraphQL endpoint | `https://${SHOPIFY_SHOP_DOMAIN}/admin/api/2024-10/graphql.json`                            |
+| Auth header      | `X-Shopify-Access-Token: ${SHOPIFY_ADMIN_TOKEN}`                                           |
+| Required scopes  | `write_inventory`, `read_inventory`, `read_products`, `read_locations`, `write_metafields` |
+| Push interval    | `SHOPIFY_PUSH_INTERVAL_MS` (default 30 s)                                                  |
+| Rollback         | Revert env var + redeploy; old token valid until manually revoked                          |

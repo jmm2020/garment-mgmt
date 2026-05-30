@@ -3,6 +3,7 @@ import {
   AuthError,
   BusinessRuleError,
   DomainError,
+  InternalError,
   NotFoundError,
   ValidationFailedError,
   isDomainError,
@@ -39,5 +40,12 @@ describe("DomainError hierarchy", () => {
   it("isDomainError rejects plain Error", () => {
     expect(isDomainError(new Error("plain"))).toBe(false);
     expect(isDomainError(new DomainError("x", "y"))).toBe(true);
+  });
+
+  it("InternalError is 500 with internal_error code", () => {
+    const err = new InternalError("vendor insert returned no row");
+    expect(err.status).toBe(500);
+    expect(err.code).toBe("internal_error");
+    expect(isDomainError(err)).toBe(true);
   });
 });

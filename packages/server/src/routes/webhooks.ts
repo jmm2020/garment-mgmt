@@ -24,10 +24,8 @@ const shopifyOrderSchema = z.object({
 export async function registerWebhookRoutes(app: FastifyInstance): Promise<void> {
   // Capture the raw request body for HMAC verification. Fastify encapsulation scopes
   // this parser to the plugin only — /api/* routes still use the default JSON parser.
-  app.addContentTypeParser(
-    "application/json",
-    { parseAs: "buffer" },
-    (_req, body, done) => done(null, body),
+  app.addContentTypeParser("application/json", { parseAs: "buffer" }, (_req, body, done) =>
+    done(null, body),
   );
 
   app.post("/orders", async (req, reply) => {

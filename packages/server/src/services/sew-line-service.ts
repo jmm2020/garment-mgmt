@@ -1,6 +1,6 @@
 import { schema, type Database, type DbExecutor } from "@garment-mgmt/db";
 import { asc, eq, inArray, sql } from "drizzle-orm";
-import { BusinessRuleError, NotFoundError } from "../errors.js";
+import { BusinessRuleError, InternalError, NotFoundError } from "../errors.js";
 import { recordAudit } from "./audit-service.js";
 import { loadBatch, writeEvent, type BatchRef } from "./production-batch-queries.js";
 
@@ -35,7 +35,8 @@ export async function createSewLine(db: Database, input: CreateSewLineInput): Pr
         active: input.active ?? true,
       })
       .returning();
-    if (!line) throw new Error("sew_line insert returned no row");
+    if (!line)
+      throw new InternalError("sew_line insert returned no row");
     await recordAudit({
       db: tx,
       entityType: "sew_line",
@@ -68,7 +69,8 @@ export async function addMachine(db: Database, input: AddMachineInput): Promise<
         status: input.status ?? "available",
       })
       .returning();
-    if (!machine) throw new Error("machine insert returned no row");
+    if (!machine)
+      throw new InternalError("machine insert returned no row");
     await recordAudit({
       db: tx,
       entityType: "machine",
@@ -200,7 +202,8 @@ export async function assignBatchToLine(
       .set({ sewLineId: line.id, assignedAt: new Date(), updatedAt: new Date() })
       .where(eq(schema.productionBatches.id, before.id))
       .returning();
-    if (!after) throw new Error("production_batch update returned no row");
+    if (!after)
+      throw new InternalError("production_batch update returned no row");
 
     await writeEvent(tx, {
       batchId: after.id,
@@ -246,7 +249,8 @@ export async function releaseBatchFromLine(
       .set({ sewLineId: null, assignedAt: null, updatedAt: new Date() })
       .where(eq(schema.productionBatches.id, before.id))
       .returning();
-    if (!after) throw new Error("production_batch update returned no row");
+    if (!after)
+      throw new InternalError("production_batch update returned no row");
 
     await writeEvent(tx, {
       batchId: after.id,

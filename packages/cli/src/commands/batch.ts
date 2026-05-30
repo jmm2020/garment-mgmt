@@ -88,9 +88,7 @@ export function registerBatchCommand(program: Command): void {
   // Forensic lookup: by batch number (PB-YYYY-####) or by Shopify order (--order).
   batch
     .command("find [batchNo]")
-    .description(
-      "Forensic lookup: by PB-YYYY-#### batch number, or by Shopify order via --order",
-    )
+    .description("Forensic lookup: by PB-YYYY-#### batch number, or by Shopify order via --order")
     .option("--order <shopifyOrderId>", "Shopify order id for reverse lookup")
     .action(async (batchNo: string | undefined, opts: { order?: string }) => {
       if (opts.order) {

@@ -139,8 +139,8 @@ The batch is `completed` in our system whether or not Shopify is reachable. Reco
 
 **Inbound (webhook)**
 
-| Variable                 | Purpose                                                                             |
-| ------------------------ | ----------------------------------------------------------------------------------- |
+| Variable                 | Purpose                                                                                                            |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------ |
 | `SHOPIFY_WEBHOOK_SECRET` | HMAC-SHA256 secret for `orders/create` webhook. Absent → verification skipped (dev/CI). Must be set in production. |
 
 Required Shopify app scopes: `write_inventory`, `read_inventory`, `read_products`, `read_locations`.

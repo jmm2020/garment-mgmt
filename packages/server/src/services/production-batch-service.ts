@@ -1,6 +1,6 @@
 import { schema, type Database, type DbExecutor } from "@garment-mgmt/db";
 import { eq, sql } from "drizzle-orm";
-import { BusinessRuleError, NotFoundError, ValidationFailedError } from "../errors.js";
+import { BusinessRuleError, InternalError, NotFoundError, ValidationFailedError } from "../errors.js";
 import { recordAudit } from "./audit-service.js";
 import { loadBatch, writeEvent, type BatchRef } from "./production-batch-queries.js";
 import { mintUnits } from "./production-unit-service.js";
@@ -69,7 +69,8 @@ export async function receiveFromCutter(
         notes: input.notes ?? null,
       })
       .returning();
-    if (!batch) throw new Error("production_batch insert returned no row");
+    if (!batch)
+      throw new InternalError("production_batch insert returned no row");
 
     await writeEvent(tx, {
       batchId: batch.id,
@@ -143,7 +144,8 @@ export async function startProduction(
       })
       .where(eq(schema.productionBatches.id, before.id))
       .returning();
-    if (!after) throw new Error("production_batch update returned no row");
+    if (!after)
+      throw new InternalError("production_batch update returned no row");
 
     await writeEvent(tx, {
       batchId: after.id,
@@ -201,7 +203,8 @@ export async function submitForQc(db: Database, input: SubmitForQcInput): Promis
       })
       .where(eq(schema.productionBatches.id, before.id))
       .returning();
-    if (!after) throw new Error("production_batch update returned no row");
+    if (!after)
+      throw new InternalError("production_batch update returned no row");
 
     await writeEvent(tx, {
       batchId: after.id,
@@ -264,7 +267,8 @@ export async function completeBatch(
       })
       .where(eq(schema.productionBatches.id, before.id))
       .returning();
-    if (!after) throw new Error("production_batch update returned no row");
+    if (!after)
+      throw new InternalError("production_batch update returned no row");
 
     await writeEvent(tx, {
       batchId: after.id,
@@ -315,7 +319,8 @@ export async function cancelBatch(db: Database, input: CancelBatchInput): Promis
       })
       .where(eq(schema.productionBatches.id, before.id))
       .returning();
-    if (!after) throw new Error("production_batch update returned no row");
+    if (!after)
+      throw new InternalError("production_batch update returned no row");
 
     await writeEvent(tx, {
       batchId: after.id,
@@ -369,7 +374,8 @@ async function transition(
       .set(patch)
       .where(eq(schema.productionBatches.id, before.id))
       .returning();
-    if (!after) throw new Error("production_batch update returned no row");
+    if (!after)
+      throw new InternalError("production_batch update returned no row");
 
     await writeEvent(tx, {
       batchId: after.id,

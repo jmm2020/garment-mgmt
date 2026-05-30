@@ -230,7 +230,9 @@ describe("production batch — forensic lookup", () => {
       });
 
       const detail = await getBatch(db, batch.id);
-      expect(detail.events.some((e) => e.eventType === "shopify_batch_metafield_failed")).toBe(true);
+      expect(detail.events.some((e) => e.eventType === "shopify_batch_metafield_failed")).toBe(
+        true,
+      );
 
       const loaded = await loadBatch(db, batch.id);
       expect(loaded.shopifyBatchMetafieldAt).toBeNull();

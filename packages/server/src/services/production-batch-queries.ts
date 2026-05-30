@@ -48,7 +48,10 @@ export async function listBatches(
       .where(eq(schema.productVariants.sku, filter.sku));
     if (variantIds.length === 0) return [];
     conditions.push(
-      inArray(schema.productionBatches.productVariantId, variantIds.map((v) => v.id)),
+      inArray(
+        schema.productionBatches.productVariantId,
+        variantIds.map((v) => v.id),
+      ),
     );
   }
   const where = conditions.length > 0 ? and(...conditions) : undefined;

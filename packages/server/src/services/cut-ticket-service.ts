@@ -1,6 +1,6 @@
 import { schema, type Database, type DbExecutor } from "@garment-mgmt/db";
 import { and, eq, sql } from "drizzle-orm";
-import { BusinessRuleError, NotFoundError, ValidationFailedError } from "../errors.js";
+import { BusinessRuleError, InternalError, NotFoundError, ValidationFailedError } from "../errors.js";
 import { recordAudit } from "./audit-service.js";
 import { componentsForCutTicket } from "./bom-service.js";
 
@@ -50,7 +50,8 @@ export async function createCutTicket(
         notes: input.notes ?? null,
       })
       .returning();
-    if (!ticket) throw new Error("cut_ticket insert returned no row");
+    if (!ticket)
+      throw new InternalError("cut_ticket insert returned no row");
 
     const requirements = await componentsForCutTicket(tx, input.bomId, input.plannedQuantityBySize);
 
@@ -102,7 +103,8 @@ export async function createCutTicket(
             plannedQuantity: pick.quantity.toFixed(3),
           })
           .returning();
-        if (!allocation) throw new Error("cut_ticket_lot insert returned no row");
+        if (!allocation)
+          throw new InternalError("cut_ticket_lot insert returned no row");
         allocations.push(allocation);
 
         // Decrement quantity_remaining inside the FOR UPDATE window so concurrent
@@ -123,7 +125,8 @@ export async function createCutTicket(
       .set({ status: "allocated", updatedAt: new Date() })
       .where(eq(schema.cutTickets.id, ticket.id))
       .returning();
-    if (!allocated) throw new Error("cut_ticket update returned no row");
+    if (!allocated)
+      throw new InternalError("cut_ticket update returned no row");
 
     await recordAudit({
       db: tx,
@@ -330,7 +333,8 @@ export async function closeCutTicket(db: Database, input: CloseCutTicketInput): 
             quantity: returned.toFixed(3),
           })
           .returning();
-        if (!remnant) throw new Error("remnant insert returned no row");
+        if (!remnant)
+          throw new InternalError("remnant insert returned no row");
 
         await recordAudit({
           db: tx,
