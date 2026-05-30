@@ -86,6 +86,24 @@ describe("listStock", () => {
     expect(url).toContain("part=42");
   });
 
+  it("appends location query param when locationId provided", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(okJson(200, { count: 0, results: [] }));
+
+    await listStock({ ...baseCfg, fetchImpl }, { locationId: 7 });
+
+    const url = fetchImpl.mock.calls[0]![0] as string;
+    expect(url).toContain("location=7");
+  });
+
+  it("appends limit query param when limit provided", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(okJson(200, { count: 0, results: [] }));
+
+    await listStock({ ...baseCfg, fetchImpl }, { limit: 500 });
+
+    const url = fetchImpl.mock.calls[0]![0] as string;
+    expect(url).toContain("limit=500");
+  });
+
   it("throws InternalError after 5 failed 500 responses", async () => {
     const fetchImpl = vi.fn().mockResolvedValue(errJson(500, { error: "srv" }));
 
@@ -309,6 +327,19 @@ describe("findOrCreatePart", () => {
 
     const body = bodyOf(fetchImpl.mock.calls[1]!);
     expect(body["description"]).toBe(input.name);
+  });
+
+  it("re-fetches existing part on 409 (concurrent create race)", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(okJson(200, { count: 0, results: [] })) // search: none found
+      .mockResolvedValueOnce(errJson(409, { detail: "duplicate IPN" })) // create: conflict
+      .mockResolvedValueOnce(okJson(200, { count: 1, results: [PART] })); // retry search: found
+
+    const result = await findOrCreatePart({ ...baseCfg, fetchImpl }, input);
+
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+    expect(result.pk).toBe(99);
   });
 
   it("returns testMode stub with correct name and IPN", async () => {

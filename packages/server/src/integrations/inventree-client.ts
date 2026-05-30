@@ -102,7 +102,8 @@ function extractErrorMessage(body: unknown, status: number): string {
 /**
  * Map a 4xx response to the correct DomainError subclass and throw it. 4xx are
  * client errors and are never retried — the caller's request will not succeed on
- * a repeat. Always throws; the `void` return is for call-site readability only.
+ * a repeat. Return type is `never` so TypeScript's control-flow analysis understands
+ * that the 4xx branch always terminates, keeping the 5xx retry path correctly typed.
  */
 function throwForStatus(status: number, body: unknown, context: string): never {
   const msg = extractErrorMessage(body, status);
@@ -154,13 +155,9 @@ async function requestWithRetry(
     }
   }
 
-  const init: RequestInit = {
-    method,
-    headers: {
-      Authorization: `Token ${apiToken}`,
-      "content-type": "application/json",
-    },
-  };
+  const headers: Record<string, string> = { Authorization: `Token ${apiToken}` };
+  if (opts?.body !== undefined) headers["content-type"] = "application/json";
+  const init: RequestInit = { method, headers };
   if (opts?.body !== undefined) {
     init.body = JSON.stringify(opts.body);
   }
@@ -203,13 +200,16 @@ async function requestWithRetry(
  */
 export async function listStock(
   cfg: InvenTreeClientConfig,
-  opts?: { partId?: number; locationId?: number },
+  opts?: { partId?: number; locationId?: number; limit?: number },
 ): Promise<StockItem[]> {
   if (cfg.testMode) return [STUB_STOCK_ITEM];
 
   const query: Record<string, number> = {};
   if (opts?.partId !== undefined) query["part"] = opts.partId;
   if (opts?.locationId !== undefined) query["location"] = opts.locationId;
+  // InvenTree paginates (default ~100 results). Callers must pass a limit large enough
+  // to cover the expected result set; cursor-based pagination is deferred to wiring phase.
+  if (opts?.limit !== undefined) query["limit"] = opts.limit;
 
   const body = await requestWithRetry(cfg, "GET", "/api/stock/", "listStock", { query });
   return (body as { results?: StockItem[] }).results ?? [];
@@ -263,14 +263,6 @@ export async function consumeStock(
 ): Promise<StockItem> {
   if (cfg.testMode) return STUB_STOCK_ITEM;
 
-  const baseUrl = cfg.baseUrl;
-  const apiToken = cfg.apiToken;
-  if (!baseUrl || !apiToken) {
-    throw new InternalError(
-      "inventree env not configured (INVENTREE_BASE_URL, INVENTREE_API_TOKEN)",
-    );
-  }
-
   const payload: Record<string, unknown> = {
     items: [{ pk: input.stockItemId, quantity: input.quantity }],
   };
@@ -279,15 +271,13 @@ export async function consumeStock(
   await requestWithRetry(cfg, "POST", "/api/stock/remove/", "consumeStock", { body: payload });
 
   // Follow-up read — single call, no retry (see doc comment above).
+  // baseUrl/apiToken guaranteed non-null: requestWithRetry above would have thrown if absent.
   const fetchFn = cfg.fetchImpl ?? fetch;
-  const followUrl = new URL(`/api/stock/${input.stockItemId}/`, baseUrl);
+  const followUrl = new URL(`/api/stock/${input.stockItemId}/`, cfg.baseUrl!);
   let res: Response;
   try {
     res = await fetchFn(followUrl.toString(), {
-      headers: {
-        Authorization: `Token ${apiToken}`,
-        "content-type": "application/json",
-      },
+      headers: { Authorization: `Token ${cfg.apiToken!}` },
     });
   } catch (err) {
     throw new InternalError("inventree consumeStock follow-up GET failed", {
@@ -340,8 +330,21 @@ export async function findOrCreatePart(
   };
   if (input.supplierId !== undefined) createPayload["default_supplier"] = input.supplierId;
 
-  const created = await requestWithRetry(cfg, "POST", "/api/part/", "findOrCreatePart create", {
-    body: createPayload,
-  });
+  let created: unknown;
+  try {
+    created = await requestWithRetry(cfg, "POST", "/api/part/", "findOrCreatePart create", {
+      body: createPayload,
+    });
+  } catch (err) {
+    if (err instanceof BusinessRuleError) {
+      // Concurrent create — re-search to return the winning record
+      const retry = await requestWithRetry(cfg, "GET", "/api/part/", "findOrCreatePart retry", {
+        query: { IPN: input.sku, limit: 1 },
+      });
+      const found2 = retry as { results?: Part[] };
+      if (found2.results?.[0]) return found2.results[0];
+    }
+    throw err;
+  }
   return created as Part;
 }
