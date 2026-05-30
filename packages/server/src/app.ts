@@ -80,6 +80,17 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
       });
       return;
     }
+    // Fastify framework errors (FST_ERR_*) carry statusCode; preserve 4xx, hide 5xx.
+    const fastifyErr = err as { statusCode?: number; code?: string; message?: string };
+    if (fastifyErr.statusCode && fastifyErr.statusCode < 500) {
+      void reply.status(fastifyErr.statusCode).send({
+        error: {
+          code: fastifyErr.code ?? "request_error",
+          message: fastifyErr.message ?? "Request error",
+        },
+      });
+      return;
+    }
     req.log.error({ err }, "unhandled error");
     void reply.status(500).send({
       error: { code: "internal_error", message: "Internal server error" },
