@@ -1,17 +1,8 @@
-// Regression tests for the central setErrorHandler in app.ts.
+// Regression for #21: empty-body POST with content-type application/json
+// raised FST_ERR_CTP_EMPTY_JSON_BODY but the error handler leaked it as 500.
 //
-// Issue #21: an empty-body POST that carried `content-type: application/json`
-// made Fastify's body parser raise FST_ERR_CTP_EMPTY_JSON_BODY (statusCode 400),
-// but the old error handler had no branch for framework errors and leaked it as a
-// generic 500. The CLI side was fixed in PR #23 (request.ts no longer sets the
-// content-type header for body-less requests) and the server side in PR #33
-// (app.ts preserves Fastify 4xx statusCode). Neither fix had test coverage — this
-// is the first test in the repo to exercise the HTTP layer end-to-end via
-// buildApp + app.inject().
-//
-// env() runs inside buildApp before envOverrides is applied and requires
-// DATABASE_URL + SESSION_SECRET, so we set hermetic fallbacks here (CI already
-// provides real values; ??= leaves those untouched).
+// env() runs inside buildApp before envOverrides is applied, so DATABASE_URL
+// and SESSION_SECRET must be set at module level (before imports).
 process.env.DATABASE_URL ??=
   process.env.TEST_DATABASE_URL ?? "postgres://dev:dev@localhost:5432/garment_mgmt_test";
 process.env.SESSION_SECRET ??= "test-secret-with-enough-length-1234567";
