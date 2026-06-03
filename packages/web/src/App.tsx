@@ -1,5 +1,6 @@
 import { Link, Outlet, useNavigate } from "react-router-dom";
-import { post } from "./api/client.js";
+import { useQueryClient } from "@tanstack/react-query";
+import { logout } from "./api/client.js";
 import { ApiError } from "./api/types.js";
 
 const navLinkStyle: React.CSSProperties = {
@@ -18,14 +19,16 @@ const navLinkStyle: React.CSSProperties = {
  */
 export function App() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   async function handleLogout() {
     try {
-      await post("/auth/logout");
+      await logout();
     } catch (err) {
-      // Logout failures should never trap the user — fall through to /login.
-      if (!(err instanceof ApiError)) throw err;
+      // Any failure (API error, network down, proxy error) must not trap the user.
+      if (!(err instanceof ApiError)) console.error("[logout] unexpected error:", err);
     }
+    queryClient.clear();
     navigate("/login");
   }
 

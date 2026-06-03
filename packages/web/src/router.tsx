@@ -10,7 +10,7 @@ import { PvtDetailPage } from "./pages/PvtDetailPage.js";
 /**
  * Route tree. `/login` sits outside the authenticated shell so it renders
  * without the nav bar. All other routes nest under <App /> via <Outlet />.
- * Paths mirror the server prefixes in packages/server/src/app.ts.
+ * Resource names align with the server's `/api/*` prefixes in packages/server/src/app.ts.
  */
 export function RouterComponent() {
   return (

@@ -8,9 +8,11 @@ import { ApiError, type ApiErrorBody } from "./types.js";
 const BASE = "";
 
 /**
- * Typed fetch wrapper mirroring the CLI `request()` (packages/cli/src/lib/request.ts):
- * same error-envelope parse, but the browser uses `credentials: 'include'` so the
- * httpOnly session cookie (gm_sid) is sent instead of an explicit cookie header.
+ * Typed fetch wrapper analogous to the CLI `request()` (packages/cli/src/lib/request.ts),
+ * but richer: throws a structured `ApiError` preserving the server `code`, HTTP `status`,
+ * and `details` rather than a plain Error with just the message.
+ * Uses `credentials: 'include'` so the httpOnly session cookie (gm_sid) is sent
+ * automatically instead of an explicit cookie header.
  */
 export async function apiFetch<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {};
@@ -24,7 +26,14 @@ export async function apiFetch<T>(method: string, path: string, body?: unknown):
   });
 
   const text = await res.text();
-  const data = text ? (JSON.parse(text) as unknown) : null;
+  let data: unknown = null;
+  if (text) {
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new ApiError("parse_error", "Server returned a non-JSON response", res.status);
+    }
+  }
 
   if (!res.ok) {
     const envelope = data as ApiErrorBody | null;
@@ -48,11 +57,16 @@ export function patch<T>(path: string, body?: unknown): Promise<T> {
   return apiFetch<T>("PATCH", path, body);
 }
 
-export function del<T>(path: string): Promise<T> {
-  return apiFetch<T>("DELETE", path);
+export function del(path: string): Promise<void> {
+  return apiFetch<void>("DELETE", path);
 }
 
 /** Authenticate against the server. Sets the session cookie on success. */
 export async function login(email: string, password: string): Promise<void> {
   await post("/auth/login", { email, password });
+}
+
+/** Sign out and invalidate the server session cookie. */
+export async function logout(): Promise<void> {
+  await post<void>("/auth/logout");
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { apiFetch, login } from "../src/api/client.js";
+import { apiFetch, login, del, post } from "../src/api/client.js";
 import { ApiError } from "../src/api/types.js";
 
 function mockResponse(status: number, body: unknown): Response {
@@ -72,7 +72,7 @@ describe("apiFetch", () => {
     await expect(apiFetch("GET", "/api/batches")).rejects.toBe(boom);
   });
 
-  it("login() calls POST /auth/login with credentials:include", async () => {
+  it("login() calls POST /auth/login with credentials:include and content-type", async () => {
     const fetchMock = vi.fn().mockResolvedValue(mockResponse(200, { ok: true }));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -84,7 +84,78 @@ describe("apiFetch", () => {
         method: "POST",
         credentials: "include",
         body: JSON.stringify({ email: "user@example.com", password: "secret" }),
+        headers: expect.objectContaining({ "content-type": "application/json" }),
       }),
     );
+  });
+
+  it("returns null for 204 with empty body", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(mockResponse(204, null)));
+
+    const result = await apiFetch("POST", "/auth/logout");
+
+    expect(result).toBeNull();
+  });
+
+  it("non-JSON error body falls back to code 'unknown' and statusText", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(mockResponse(502, null)));
+
+    const err = await apiFetch("GET", "/api/batches").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).code).toBe("unknown");
+    expect((err as ApiError).message).toBe("HTTP 502");
+    expect((err as ApiError).status).toBe(502);
+  });
+
+  it("non-JSON response body throws ApiError with code parse_error", async () => {
+    const badResponse = {
+      ok: false,
+      status: 502,
+      statusText: "Bad Gateway",
+      text: () => Promise.resolve("<html>Bad Gateway</html>"),
+    } as unknown as Response;
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(badResponse));
+
+    const err = await apiFetch("GET", "/api/batches").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).code).toBe("parse_error");
+    expect((err as ApiError).status).toBe(502);
+  });
+
+  it("400 response with details populates ApiError.details", async () => {
+    const details = [{ path: ["email"], message: "Invalid email" }];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        mockResponse(400, { error: { code: "validation_failed", message: "Bad input", details } }),
+      ),
+    );
+
+    const err = await apiFetch("POST", "/api/batches").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).details).toEqual(details);
+  });
+
+  it("del() sends DELETE with no content-type and no body", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse(204, null));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await del("/api/batches/1");
+
+    const [, opts] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(opts.method).toBe("DELETE");
+    expect(opts.body).toBeUndefined();
+    expect((opts.headers as Record<string, string>)?.["content-type"]).toBeUndefined();
+  });
+
+  it("post() sends POST with content-type: application/json", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(mockResponse(200, { ok: true }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await post("/api/batches", { ref: "PB-2024-0001" });
+
+    const [, opts] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(opts.method).toBe("POST");
+    expect((opts.headers as Record<string, string>)?.["content-type"]).toBe("application/json");
   });
 });

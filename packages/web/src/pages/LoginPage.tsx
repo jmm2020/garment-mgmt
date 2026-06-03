@@ -8,10 +8,12 @@ export function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    setLoading(true);
     try {
       await login(email, password);
       navigate("/");
@@ -19,8 +21,12 @@ export function LoginPage() {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        throw err;
+        // Re-throw unexpected errors (network failures, runtime errors) — don't mask as login failure.
+        console.error("[login] unexpected error:", err);
+        setError("Network error — please try again.");
       }
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -48,8 +54,8 @@ export function LoginPage() {
             style={{ minHeight: 44, padding: "0 8px" }}
           />
         </label>
-        <button type="submit" style={{ minHeight: 44, cursor: "pointer" }}>
-          Log in
+        <button type="submit" disabled={loading} style={{ minHeight: 44, cursor: loading ? "not-allowed" : "pointer" }}>
+          {loading ? "Logging in…" : "Log in"}
         </button>
         {error && <p style={{ color: "#b00020" }}>{error}</p>}
       </form>

@@ -34,9 +34,11 @@ export interface BatchSummary {
   id: number;
   batchNo: string;
   status: string;
+  /** Postgres numeric columns — parse with parseFloat() before display math. */
   qtyPlanned: string;
   qtyActual: string | null;
-  sku: string;
+  /** FK to product_variants; the SKU string requires a JOIN not returned by listBatches. */
+  productVariantId: number;
 }
 
 export interface PvtSummary {

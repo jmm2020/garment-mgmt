@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "eslint ."
   },
   "dependencies": {
     "react": "^18.3.0",
@@ -24,7 +25,6 @@
     "vite": "^5.4.0",
     "vitest": "^2.1.4",
     "@testing-library/react": "^16.0.0",
-    "@testing-library/user-event": "^14.5.0",
-    "msw": "^2.4.0"
+    "@testing-library/user-event": "^14.5.0"
   }
 }

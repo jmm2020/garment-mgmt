@@ -1,11 +1,12 @@
 import { useParams } from "react-router-dom";
 
 export function BatchDetailPage() {
-  const { ref = "" } = useParams();
+  const { ref } = useParams<{ ref: string }>();
+  if (!ref) return null;
   return (
     <div>
       <h1>Batch {ref}</h1>
-      {/* TODO: batch detail via useQuery(get(`/api/batches/${ref}`)) — iter 3 */}
+      {/* TODO iter 3: useQuery({ queryKey: ['batches', ref], queryFn: () => get<BatchSummary>('/api/batches/' + ref) }) */}
       <p>TODO: batch detail</p>
     </div>
   );
