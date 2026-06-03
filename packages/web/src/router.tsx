@@ -7,11 +7,7 @@ import { BatchDetailPage } from "./pages/BatchDetailPage.js";
 import { PvtPage } from "./pages/PvtPage.js";
 import { PvtDetailPage } from "./pages/PvtDetailPage.js";
 
-/**
- * Route tree. `/login` sits outside the authenticated shell so it renders
- * without the nav bar. All other routes nest under <App /> via <Outlet />.
- * Resource names align with the server's `/api/*` prefixes in packages/server/src/app.ts.
- */
+/** `/login` renders outside the auth shell; all other routes nest under <App />. */
 export function RouterComponent() {
   return (
     <Routes>

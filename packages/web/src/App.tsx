@@ -13,10 +13,7 @@ const navLinkStyle: React.CSSProperties = {
   fontWeight: 600,
 };
 
-/**
- * Authenticated app shell: brand + nav + logout, with page content rendered
- * through <Outlet />. Large tap targets (min 44px) keep it floor-tablet friendly.
- */
+/** Authenticated shell: nav bar + logout + page outlet. Min-44px tap targets for floor tablets. */
 export function App() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();

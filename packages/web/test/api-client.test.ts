@@ -40,11 +40,6 @@ describe("apiFetch", () => {
       ),
     );
 
-    await expect(apiFetch("GET", "/api/batches")).rejects.toMatchObject({
-      code: "auth.unauthorized",
-      status: 401,
-    });
-
     const err = await apiFetch("GET", "/api/batches").catch((e: unknown) => e);
     expect(err).toBeInstanceOf(ApiError);
     expect((err as ApiError).code).toBe("auth.unauthorized");

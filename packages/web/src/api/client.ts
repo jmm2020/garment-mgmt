@@ -1,24 +1,12 @@
 import { ApiError, type ApiErrorBody } from "./types.js";
 
-/**
- * Empty base — URLs are relative. In dev the Vite proxy forwards `/api` and
- * `/auth` to localhost:3000; in prod the web bundle is served same-origin as
- * the API, so relative paths resolve correctly without a proxy.
- */
-const BASE = "";
-
-/**
- * Typed fetch wrapper analogous to the CLI `request()` (packages/cli/src/lib/request.ts),
- * but richer: throws a structured `ApiError` preserving the server `code`, HTTP `status`,
- * and `details` rather than a plain Error with just the message.
- * Uses `credentials: 'include'` so the httpOnly session cookie (gm_sid) is sent
- * automatically instead of an explicit cookie header.
- */
+// URLs are relative — Vite proxy forwards /api + /auth to :3000 in dev; same-origin in prod.
+// credentials:"include" sends the httpOnly session cookie (gm_sid) automatically.
 export async function apiFetch<T>(method: string, path: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {};
   if (body !== undefined) headers["content-type"] = "application/json";
 
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(path, {
     method,
     headers,
     credentials: "include",

@@ -1,10 +1,3 @@
-/**
- * Shared API types for the web client.
- *
- * Mirrors the server error envelope emitted by setErrorHandler in
- * packages/server/src/app.ts: { error: { code, message, details } }.
- */
-
 export interface ApiErrorBody {
   error: {
     code: string;
@@ -13,10 +6,7 @@ export interface ApiErrorBody {
   };
 }
 
-/**
- * Thrown by the API client on any non-ok response. Extends Error so consumers
- * can branch with `if (err instanceof ApiError)` and read the server `code`.
- */
+/** Thrown on any non-ok response; carries the server `code` for branching. */
 export class ApiError extends Error {
   constructor(
     public readonly code: string,
