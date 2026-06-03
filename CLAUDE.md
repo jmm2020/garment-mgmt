@@ -29,10 +29,11 @@ The codebase is **iteration 1** of a 4-iteration plan. Schema reserves seams (`b
 | HTTP     | Fastify 5 · Zod 3.23 for validation                                     |
 | Auth     | Bcryptjs session tokens, cookie-based                                   |
 | CLI      | Commander 12 (`gm` entry, session at `~/.garment-mgmt/session`)         |
+| Web UI   | React 18 · Vite 5 · react-router-dom 6 · TanStack Query v5 · `packages/web` |
 | Tests    | Vitest 2 · `withTestDb()` rollback harness · per-service unit tests     |
 | CI       | GitHub Actions · Postgres-as-a-service · matrix Node 20                 |
 
-Three workspaces: `packages/db`, `packages/server`, `packages/cli`.
+Four workspaces: `packages/db`, `packages/server`, `packages/cli`, `packages/web`.
 
 ---
 

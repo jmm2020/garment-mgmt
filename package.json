@@ -15,6 +15,7 @@
     "format": "prettier --write .",
     "test": "pnpm -r test",
     "dev": "pnpm --filter @garment-mgmt/server dev",
+    "dev:web": "pnpm --filter @garment-mgmt/web dev",
     "migrate": "pnpm --filter @garment-mgmt/db migrate",
     "seed": "pnpm --filter @garment-mgmt/db seed",
     "generate": "pnpm --filter @garment-mgmt/db generate",

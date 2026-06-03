@@ -17,7 +17,7 @@
 
 > **Note on FG inventory:** ADR-0001 originally placed finished-goods inventory in Cin7. Iteration 2 supersedes that — Shopify becomes the FG source of truth. See ADR-0005. Raw-material tracking moved from Cin7 Core to InvenTree (self-hosted, MIT-licensed) — see ADR-0006.
 
-Iteration 1 ships a typed Fastify HTTP API + a Commander-based operator CLI (`gm`) that walks the full demo flow end-to-end. No UI yet.
+Iteration 1 ships a typed Fastify HTTP API + a Commander-based operator CLI (`gm`) that walks the full demo flow end-to-end. Iteration 2 adds production batch tracking, PVT, and a React web shell (`packages/web`) for browser-based operator access.
 
 ## Requirements
 
@@ -58,6 +58,7 @@ packages/
   db/         Drizzle schema, migrations, seed, singleton client, DbExecutor type
   server/     Fastify app, services (business rules), routes (HTTP), test harness
   cli/        `gm` operator CLI (commander, hits the HTTP API)
+  web/        React + Vite operator UI; typed fetch client mirroring the CLI request()
 
 docs/
   adr/        Architecture decisions (numbered, immutable)
@@ -85,6 +86,7 @@ scripts/      One-time setup (e.g., init-test-db.sql)
 | `pnpm test`                   | Vitest across all packages                                      |
 | `pnpm build`                  | Per-package build (no emit — tsx at runtime)                    |
 | `pnpm dev`                    | Server in watch mode                                            |
+| `pnpm dev:web`                | Vite dev server on :5173 (proxies /api and /auth → :3000)       |
 | `pnpm migrate`                | Apply pending Drizzle migrations to `DATABASE_URL`              |
 | `pnpm seed`                   | Idempotent seed                                                 |
 | `pnpm generate`               | `drizzle-kit generate` (schema change → new SQL migration file) |
@@ -238,13 +240,13 @@ The `withTestDb(cb)` helper (`packages/server/test/helpers/test-db.ts`) wraps ea
 | Iteration | Scope                                                                                                                                      | Status                                      |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
 | **1**     | Data layer, services, REST API, CLI, lot provenance, cut-ticket flow (cut-only)                                                            | shipped — PR #1 (foundation)                |
-| **2**     | Production batches (PB-YYYY-####), per-unit tracking, PVT, structured SKUs, Shopify inventory push, sew-line capacity + machine assignment | shipped — PR #2 (production tracking + PVT) |
-| **3**     | React UI, real-time push (WS/SSE), sew/QC/finish/pack workflow                                                                             | future                                      |
+| **2**     | Production batches (PB-YYYY-####), per-unit tracking, PVT, structured SKUs, Shopify inventory push, sew-line capacity + machine assignment, React web shell (login + stubs) | shipped — PRs #2, #37 |
+| **3**     | Real-time push (WS/SSE), full sew/QC/finish/pack workflow screens                                                                          | future                                      |
 | **4+**    | CSV export, multi-facility, native mobile, SAM-based costing                                                                               | future                                      |
 
 ## Out of scope (iterations 3+)
 
-- **Iteration 3+**: React UI · real-time push (WS/SSE) · sew/QC/finish/pack workflow screens
+- **Iteration 3+**: Real-time push (WS/SSE) · full sew/QC/finish/pack workflow screens
 - **Iteration 4+**: CSV export · multi-facility · native mobile · SAM costing engine
 
 Schema reserves the seams (`base_sam_minutes`, `fg_sku`, `file_ref`, `reorder_point`, `target_stock`) — implementations land in iterations 3+.
