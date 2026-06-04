@@ -50,6 +50,8 @@ export const materialLots = pgTable(
     defectsNotes: text("defects_notes"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+    // Null until the lot has been pushed to InvenTree. Set by the inventree-sync job.
+    inventreePushedAt: timestamp("inventree_pushed_at", { withTimezone: true }),
   },
   (t) => ({
     variantLotUnique: uniqueIndex("material_lots_variant_lot_unique").on(

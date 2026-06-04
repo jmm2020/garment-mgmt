@@ -1,0 +1,1 @@
+ALTER TABLE "material_lots" ADD COLUMN "inventree_pushed_at" timestamp with time zone;
