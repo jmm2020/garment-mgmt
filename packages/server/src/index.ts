@@ -1,6 +1,7 @@
 import { createDb } from "@garment-mgmt/db";
 import { buildApp } from "./app.js";
 import { env } from "./env.js";
+import { startInventorySyncLoop } from "./jobs/inventree-sync.js";
 import { startInventoryPushLoop } from "./jobs/shopify-inventory-push.js";
 
 async function main(): Promise<void> {
@@ -29,9 +30,31 @@ async function main(): Promise<void> {
     "shopify push loop started",
   );
 
+  const inventreeTestMode = !config.INVENTREE_API_TOKEN;
+  const syncHandle = startInventorySyncLoop(
+    db,
+    {
+      baseUrl: config.INVENTREE_BASE_URL,
+      apiToken: config.INVENTREE_API_TOKEN,
+      defaultLocationId: config.INVENTREE_DEFAULT_LOCATION_ID,
+      testMode: inventreeTestMode,
+    },
+    config.INVENTREE_PUSH_INTERVAL_MS,
+    (r) => {
+      if (r.scanned > 0) {
+        app.log.info(r, "inventree sync tick");
+      }
+    },
+  );
+  app.log.info(
+    { intervalMs: config.INVENTREE_PUSH_INTERVAL_MS, testMode: inventreeTestMode },
+    "inventree sync loop started",
+  );
+
   const shutdown = async () => {
     pushHandle.stop();
-    await Promise.all([pushHandle.promise, app.close()]);
+    syncHandle.stop();
+    await Promise.all([pushHandle.promise, syncHandle.promise, app.close()]);
     process.exit(0);
   };
   process.on("SIGTERM", () => void shutdown());
@@ -42,6 +65,7 @@ async function main(): Promise<void> {
     app.log.info(`server listening on ${config.PORT}`);
   } catch (err) {
     pushHandle.stop();
+    syncHandle.stop();
     app.log.error(err);
     process.exit(1);
   }

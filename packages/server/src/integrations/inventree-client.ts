@@ -50,6 +50,8 @@ export interface InvenTreeClientConfig {
   fetchImpl?: typeof fetch;
   // Override the sleep used between retries; tests collapse it to 0.
   delayMs?: (ms: number) => Promise<void>;
+  // Default InvenTree stock location; when absent, stock is received unlocated.
+  defaultLocationId?: number;
 }
 
 const STUB_STOCK_ITEM: StockItem = {
@@ -224,7 +226,7 @@ export async function receiveStock(
   input: {
     partId: number;
     quantity: number;
-    locationId: number;
+    locationId?: number; // optional — InvenTree allows unlocated stock
     batch?: string;
     supplierLotId?: number;
   },
@@ -234,8 +236,8 @@ export async function receiveStock(
   const payload: Record<string, unknown> = {
     part: input.partId,
     quantity: input.quantity,
-    location: input.locationId,
   };
+  if (input.locationId !== undefined) payload["location"] = input.locationId;
   if (input.batch !== undefined) payload["batch"] = input.batch;
   if (input.supplierLotId !== undefined) payload["supplier_part"] = input.supplierLotId;
 

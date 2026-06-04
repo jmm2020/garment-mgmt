@@ -20,6 +20,8 @@ const envSchema = z.object({
   // BASE_URL is validated as a URL so a malformed value fails fast at startup.
   INVENTREE_BASE_URL: z.string().url().optional(),
   INVENTREE_API_TOKEN: z.string().optional(),
+  INVENTREE_DEFAULT_LOCATION_ID: z.coerce.number().int().positive().optional(),
+  INVENTREE_PUSH_INTERVAL_MS: z.coerce.number().int().positive().default(60_000),
   // Per-product override lives on products.pvt_validity_months; this is the fallback.
   PVT_DEFAULT_VALIDITY_MONTHS: z.coerce.number().int().positive().default(6),
 });
