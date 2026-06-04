@@ -15,7 +15,8 @@ export function PvtPage() {
   const params = new URLSearchParams();
   if (statusFilter) params.set("status", statusFilter);
   if (activeOnly) params.set("activeOnly", "true");
-  const url = `/api/pvt${params.toString() ? "?" + params.toString() : ""}`;
+  const qs = params.toString();
+  const url = qs ? `/api/pvt?${qs}` : "/api/pvt";
 
   const { data: runs, isLoading, isError } = useQuery({
     queryKey: ["pvt", statusFilter, activeOnly],

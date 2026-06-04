@@ -14,19 +14,7 @@ export interface SyncOnceResult {
   failed: number;
 }
 
-/**
- * Single sweep: find every material_lot where inventree_pushed_at IS NULL.
- * For each: find-or-create the InvenTree part (by variantSku), receive stock,
- * then mark inventree_pushed_at. Already-stamped lots are skipped.
- *
- * At-least-once delivery: if the DB stamp fails after the InvenTree call
- * succeeds (rare transient window), the lot will be re-selected on the next
- * tick and stock received again. Matches the at-least-once semantics of the
- * Shopify push loop.
- *
- * In test mode (InvenTree env vars absent) the client stubs all calls and
- * we still mark the lot as pushed (so CI stays clean).
- */
+// At-least-once: if the DB stamp fails after a successful InvenTree call, the lot re-syncs next tick.
 export async function syncPendingOnceLots(
   db: Database,
   cfg: InvenTreeClientConfig,

@@ -10,14 +10,7 @@ interface TransitionEvent {
   at: string;
 }
 
-/**
- * Opens a single EventSource to /api/events/stream for the lifetime of the
- * component. On each `transition` event, invalidates the relevant TanStack
- * Query keys so views refetch authoritative data.
- * The stream is a SIGNAL — we never mutate local state from it.
- * Auto-reconnect is handled by the browser's native EventSource implementation.
- * Closed automatically when the calling component unmounts.
- */
+// Stream is a SIGNAL — never mutate local state from it; invalidate queries instead.
 export function useEventStream(): void {
   const qc = useQueryClient();
 

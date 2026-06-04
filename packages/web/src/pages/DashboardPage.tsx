@@ -23,7 +23,6 @@ export function DashboardPage() {
   const batches = batchesQ.data ?? [];
   const pvtRuns = pvtQ.data ?? [];
 
-  // Count active batches by status
   const counts: Partial<Record<BatchStatus, number>> = {};
   for (const b of batches) {
     if (ACTIVE_STATUSES.includes(b.status as BatchStatus)) {
@@ -31,14 +30,12 @@ export function DashboardPage() {
     }
   }
 
-  // Today's completed throughput (sum qtyActual for batches completed today)
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const todayThroughput = batches
     .filter((b) => b.status === "completed" && b.completedAt && new Date(b.completedAt) >= todayStart)
     .reduce((sum, b) => sum + parseFloat(b.qtyActual ?? "0"), 0);
 
-  // Expired/expiring PVT alerts (expiresAt in the past or within 7 days)
   const alertPvt = pvtRuns.filter((r) => {
     if (!r.expiresAt) return false;
     const exp = new Date(r.expiresAt);

@@ -19,8 +19,7 @@ export function App() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Open SSE stream for the lifetime of this authenticated shell.
-  // Closes automatically when App unmounts (on logout or 401 redirect).
+  // Closed automatically when App unmounts (on logout or 401 redirect).
   useEventStream();
 
   async function handleLogout() {
