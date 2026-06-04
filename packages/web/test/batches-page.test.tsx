@@ -44,6 +44,19 @@ describe("BatchesPage", () => {
     const link = await screen.findByRole("link", { name: /PB-2026-0001/i });
     expect(link.getAttribute("href")).toBe("/batches/PB-2026-0001");
   });
+
+  it("selecting a status filter calls get with status query param", async () => {
+    const getSpy = vi.spyOn(client, "get").mockResolvedValue([]);
+    renderBatches();
+
+    await screen.findByRole("table");
+    const select = screen.getByRole("combobox", { name: /filter by status/i });
+    await userEvent.selectOptions(select, "in_production");
+
+    expect(getSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/api/batches?status=in_production"),
+    );
+  });
 });
 
 function renderDetail(batch: BatchDetail) {
@@ -119,6 +132,89 @@ describe("BatchDetailPage mutation paths", () => {
     expect(postSpy).toHaveBeenCalledWith(
       expect.stringContaining("/api/batches/PB-2026-0001/submit-qc"),
       expect.anything(),
+    );
+  });
+});
+
+describe("BatchDetailPage — button disabled state", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  it("Submit QC button is disabled until qty is entered", async () => {
+    vi.spyOn(client, "get").mockResolvedValue(batchIn);
+    renderDetail(batchIn);
+
+    const btn = await screen.findByRole("button", { name: /submit.*qc/i });
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
+
+    const qtyInput = screen.getAllByRole("textbox")[0]!;
+    await userEvent.type(qtyInput, "99");
+    expect((btn as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("Complete button is disabled until qty is entered", async () => {
+    const awaitingQc: BatchDetail = { ...batchIn, status: "awaiting_qc" };
+    vi.spyOn(client, "get").mockResolvedValue(awaitingQc);
+    renderDetail(awaitingQc);
+
+    const btn = await screen.findByRole("button", { name: /^complete/i });
+    expect((btn as HTMLButtonElement).disabled).toBe(true);
+
+    const qtyInput = screen.getAllByRole("textbox")[0]!;
+    await userEvent.type(qtyInput, "50");
+    expect((btn as HTMLButtonElement).disabled).toBe(false);
+  });
+});
+
+describe("BatchDetailPage — cancel action", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  it("Cancel button is disabled until a reason is entered", async () => {
+    const receivedBatch: BatchDetail = { ...batchIn, status: "received_from_cutter", startedAt: null };
+    vi.spyOn(client, "get").mockResolvedValue(receivedBatch);
+    renderDetail(receivedBatch);
+
+    const cancelBtn = await screen.findByRole("button", { name: /^cancel/i });
+    expect((cancelBtn as HTMLButtonElement).disabled).toBe(true);
+
+    const reasonInput = screen.getByRole("textbox", { name: /cancel reason/i });
+    await userEvent.type(reasonInput, "Wrong cut");
+    expect((cancelBtn as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("clicking Cancel POSTs to the correct endpoint with reason", async () => {
+    const receivedBatch: BatchDetail = { ...batchIn, status: "received_from_cutter", startedAt: null };
+    vi.spyOn(client, "get").mockResolvedValue(receivedBatch);
+    const postSpy = vi.spyOn(client, "post").mockResolvedValue(undefined);
+    renderDetail(receivedBatch);
+
+    const reasonInput = await screen.findByRole("textbox", { name: /cancel reason/i });
+    await userEvent.type(reasonInput, "Wrong cut");
+    await userEvent.click(screen.getByRole("button", { name: /^cancel/i }));
+
+    expect(postSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/api/batches/PB-2026-0001/cancel"),
+      expect.objectContaining({ reason: "Wrong cut" }),
+    );
+  });
+});
+
+describe("BatchDetailPage — complete mutation", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  it("clicking Complete POSTs qty and verdict to correct endpoint", async () => {
+    const awaitingQc: BatchDetail = { ...batchIn, status: "awaiting_qc" };
+    vi.spyOn(client, "get").mockResolvedValue(awaitingQc);
+    const postSpy = vi.spyOn(client, "post").mockResolvedValue(undefined);
+    renderDetail(awaitingQc);
+
+    await screen.findByText("PB-2026-0001");
+    const qtyInput = screen.getAllByRole("textbox")[0]!;
+    await userEvent.type(qtyInput, "95");
+    await userEvent.click(screen.getByRole("button", { name: /^complete/i }));
+
+    expect(postSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/api/batches/PB-2026-0001/complete"),
+      expect.objectContaining({ qty: "95", verdict: "pass" }),
     );
   });
 });

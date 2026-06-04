@@ -6,6 +6,7 @@ import {
   receiveStock,
   type InvenTreeClientConfig,
 } from "../integrations/inventree-client.js";
+import { recordAudit } from "../services/audit-service.js";
 import type { LoopHandle } from "./loop-handle.js";
 
 export interface SyncOnceResult {
@@ -53,10 +54,21 @@ export async function syncPendingOnceLots(
         batch: row.lotCode,
       });
 
-      await db
-        .update(schema.materialLots)
-        .set({ inventreePushedAt: new Date(), updatedAt: new Date() })
-        .where(eq(schema.materialLots.id, row.lotId));
+      const pushedAt = new Date();
+      await db.transaction(async (tx) => {
+        await tx
+          .update(schema.materialLots)
+          .set({ inventreePushedAt: pushedAt, updatedAt: pushedAt })
+          .where(eq(schema.materialLots.id, row.lotId));
+
+        await recordAudit({
+          db: tx,
+          entityType: "material_lot",
+          entityId: row.lotId,
+          action: "inventree_sync.pushed",
+          after: { lotCode: row.lotCode, inventreePushedAt: pushedAt.toISOString() },
+        });
+      });
 
       pushed++;
     } catch (err) {

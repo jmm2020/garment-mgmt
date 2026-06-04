@@ -16,7 +16,7 @@ Guidance for AI coding agents (Claude Code, Cursor, Codex, etc.) working in this
 - **iter 2:** production batches, station tracking, structured FG SKUs, Shopify inventory push
 - audit log (recursive secret scrubbing)
 
-The codebase is **iteration 1** of a 4-iteration plan. Schema reserves seams (`base_sam_minutes`, `fg_sku`, `reorder_point`) for later iterations — leave them in place.
+This is an ongoing multi-iteration codebase. Schema reserves seams (`base_sam_minutes`, `fg_sku`, `reorder_point`) for later iterations — leave them in place.
 
 ---
 

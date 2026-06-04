@@ -4,8 +4,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { get, post } from "../api/client.js";
 import type { BatchDetail, BatchStatus } from "../api/types.js";
 
+type ActionType = "stage" | "start" | "submit-qc" | "complete" | "cancel";
+
 /** Actions enabled per status. */
-const LEGAL_ACTIONS: Record<BatchStatus, string[]> = {
+const LEGAL_ACTIONS: Record<BatchStatus, ActionType[]> = {
   received_from_cutter: ["stage", "cancel"],
   staged_pre_prod: ["start", "cancel"],
   in_production: ["submit-qc", "cancel"],
@@ -19,6 +21,7 @@ export function BatchDetailPage() {
   const qc = useQueryClient();
   const [qtyInput, setQtyInput] = useState("");
   const [verdict, setVerdict] = useState<"pass" | "fail" | "pass_with_notes">("pass");
+  const [noteInput, setNoteInput] = useState("");
   const [cancelReason, setCancelReason] = useState("");
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -33,13 +36,14 @@ export function BatchDetailPage() {
   };
 
   const action = useMutation({
-    mutationFn: async ({ type }: { type: string }) => {
+    mutationFn: async ({ type }: { type: ActionType }) => {
       setActionError(null);
       if (type === "stage") return post(`/api/batches/${ref}/stage`);
       if (type === "start") return post(`/api/batches/${ref}/start`);
       if (type === "submit-qc") return post(`/api/batches/${ref}/submit-qc`, { qty: qtyInput });
-      if (type === "complete") return post(`/api/batches/${ref}/complete`, { qty: qtyInput, verdict });
+      if (type === "complete") return post(`/api/batches/${ref}/complete`, { qty: qtyInput, verdict, note: noteInput || undefined });
       if (type === "cancel") return post(`/api/batches/${ref}/cancel`, { reason: cancelReason });
+      throw new Error(`[BatchDetailPage] unknown action type: ${String(type)}`);
     },
     onSuccess: invalidate,
     onError: (err: unknown) => {
@@ -77,6 +81,12 @@ export function BatchDetailPage() {
                 <option value="fail">Fail</option>
                 <option value="pass_with_notes">Pass with notes</option>
               </select>
+            </label>
+          )}
+          {legal.includes("complete") && (
+            <label style={{ display: "block", marginBottom: 8 }}>
+              Note (optional):{" "}
+              <input value={noteInput} onChange={(e) => setNoteInput(e.target.value)} style={{ width: 240 }} />
             </label>
           )}
           {legal.includes("cancel") && (
