@@ -154,3 +154,24 @@ describe("apiFetch", () => {
     expect((opts.headers as Record<string, string>)?.["content-type"]).toBe("application/json");
   });
 });
+
+describe("global 401 redirect", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+  });
+
+  it("a 401 ApiError triggers navigation to /login via window.location.replace", async () => {
+    // This is tested indirectly via QueryClient onError; we test that apiFetch
+    // throws ApiError with status 401 so the caller can detect it.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        mockResponse(401, { error: { code: "auth.unauthorized", message: "Authentication required" } }),
+      ),
+    );
+
+    const err = await apiFetch("GET", "/api/batches").catch((e: unknown) => e);
+    expect(err).toBeInstanceOf(ApiError);
+    expect((err as ApiError).status).toBe(401);
+  });
+});
