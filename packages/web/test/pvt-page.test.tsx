@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { vi, describe, it, expect, beforeEach } from "vitest";
@@ -88,5 +89,35 @@ describe("PvtDetailPage action gating", () => {
 
     await screen.findByText("PVT-2026-0001");
     expect(screen.queryByRole("button")).toBeNull();
+  });
+});
+
+describe("PvtDetailPage mutation paths", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  it("clicking Validate calls POST to correct endpoint", async () => {
+    vi.spyOn(client, "get").mockResolvedValue(baseRun);
+    const postSpy = vi.spyOn(client, "post").mockResolvedValue(undefined);
+    renderPvtDetail(baseRun);
+
+    await userEvent.click(await screen.findByRole("button", { name: /validate/i }));
+
+    expect(postSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/api/pvt/PVT-2026-0001/validate"),
+      expect.anything(),
+    );
+  });
+
+  it("clicking Ship calls POST to correct endpoint", async () => {
+    const cuttingRun: PvtDetail = { ...baseRun, status: "cutting" };
+    vi.spyOn(client, "get").mockResolvedValue(cuttingRun);
+    const postSpy = vi.spyOn(client, "post").mockResolvedValue(undefined);
+    renderPvtDetail(cuttingRun);
+
+    await userEvent.click(await screen.findByRole("button", { name: /^ship/i }));
+
+    expect(postSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/api/pvt/PVT-2026-0001/ship"),
+    );
   });
 });

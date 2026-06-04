@@ -237,7 +237,7 @@ export async function cancelPvtRun(db: Database, input: CancelPvtInput): Promise
   if (!input.reason?.trim()) {
     throw new ValidationFailedError("cancel reason is required");
   }
-  let prevStatus: PvtStatus = "cutting";
+  let prevStatus!: PvtStatus; // assigned in tx before use
   const after = await db.transaction(async (tx) => {
     const before = await loadRun(tx, input.ref);
     prevStatus = before.status;

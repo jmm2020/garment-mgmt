@@ -177,6 +177,17 @@ packages/server/src/
   app.ts                   ← buildApp(): env parse → drizzle → routes → setErrorHandler
 ```
 
+packages/web/src/
+  api/
+    client.ts          ← typed fetch wrapper (credentials: include); throws ApiError on non-2xx
+    types.ts           ← BatchDetail, PvtDetail, ProductionEvent, PvtEvent — mirrors server shapes
+  hooks/
+    useEventStream.ts  ← single EventSource; invalidates TanStack Query keys on each `transition` event
+  pages/               ← one file per screen (Dashboard, Batches, BatchDetail, Pvt, PvtDetail, Login)
+  App.tsx              ← QueryCache.onError → /login on 401; logout clears cache + navigates
+  router.tsx           ← react-router-dom route tree
+  main.tsx             ← QueryClient + BrowserRouter bootstrap
+
 ### Naming
 
 - **Tables**: snake_case (`material_lots`, `cut_ticket_lots`)
@@ -191,6 +202,7 @@ packages/server/src/
 - **DB-touching code**: use `withTestDb(async tx => { … })`. Each test gets a tx that rolls back. Suites can run in parallel.
 - **Integration tests** (iter 2): `app.inject({ method, url, payload })` against a real Fastify app + `withTestDb`.
 - **No mocking of Drizzle.** If you find yourself reaching for `vi.mock("drizzle-orm")`, use `withTestDb` instead.
+- **Web components** (`packages/web`): Vitest + jsdom + `@testing-library/react`. API calls are mocked via `vi.spyOn(client, 'get'|'post'|...)` — this is the correct boundary; do **not** use `withTestDb` for web tests.
 
 ### Migrations
 
@@ -227,6 +239,6 @@ packages/server/src/
 | Iter | Theme                                            | Status                   |
 | ---- | ------------------------------------------------ | ------------------------ |
 | 1    | Data layer, REST API, CLI, lot/cut foundation    | ✅ Merged (PR #1)        |
-| 2    | Production batches, station tracking, Shopify FG | In progress (PRs #2–#11) |
-| 3    | React UI, real-time, sew/QC/finish/pack          | future                   |
-| 4+   | CSV export, multi-facility, mobile, SAM costing  | future                   |
+| 2    | Production batches, station tracking, Shopify FG | ✅ Merged (PRs #2–#11)   |
+| 3    | React UI + SSE real-time (Dashboard, Batches, PVT, InvenTree sync) | In progress (PRs #38–#45) |
+| 4    | Sew-line UI, lots/cut-tickets/BOM/PO surfaces, CSV export, multi-facility | future |

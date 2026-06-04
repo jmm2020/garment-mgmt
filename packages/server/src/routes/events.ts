@@ -9,8 +9,9 @@ export async function registerEventRoutes(app: FastifyInstance): Promise<void> {
     reply.raw.setHeader("Connection", "keep-alive");
     reply.raw.flushHeaders();
 
-    const write = (chunk: string) => {
-      if (!reply.raw.writableEnded) reply.raw.write(chunk);
+    const write = (chunk: string): boolean => {
+      if (reply.raw.writableEnded) return false;
+      return reply.raw.write(chunk);
     };
 
     const onTransition = (event: TransitionEvent) => {

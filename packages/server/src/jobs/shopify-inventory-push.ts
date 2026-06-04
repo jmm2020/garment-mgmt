@@ -1,6 +1,7 @@
 import { setTimeout as delay } from "node:timers/promises";
 import { schema, type Database } from "@garment-mgmt/db";
 import { and, eq, isNull, or } from "drizzle-orm";
+import type { LoopHandle } from "./loop-handle.js";
 import {
   cacheVariantGid,
   markBatchMetafieldWritten,
@@ -165,11 +166,6 @@ export async function pushPendingOnce(
   return { scanned: rows.length, pushed, failed, metafieldSet, metafieldFailed };
 }
 
-export interface PushLoopHandle {
-  stop: () => void;
-  promise: Promise<void>;
-}
-
 /**
  * Background poller. Calls pushPendingOnce on a fixed interval. The interval is
  * configurable via env SHOPIFY_PUSH_INTERVAL_MS (default 30s). Idempotent against
@@ -181,7 +177,7 @@ export function startInventoryPushLoop(
   cfg: ShopifyClientConfig,
   intervalMs: number,
   onTick?: (r: PushOnceResult) => void,
-): PushLoopHandle {
+): LoopHandle {
   let stopped = false;
   const promise = (async () => {
     while (!stopped) {

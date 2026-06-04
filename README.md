@@ -161,6 +161,7 @@ Mounted under `/` from `packages/server/src/routes/`. All mutating endpoints req
 | `pvt`         | `GET/POST /api/pvt`, `GET /api/pvt/:ref`, `POST /api/pvt/:ref/ship`, `POST /api/pvt/:ref/receive`, `POST /api/pvt/:ref/validate`, `POST /api/pvt/:ref/reject`, `POST /api/pvt/:ref/cancel`, `GET /api/products/:variantId/pvt-status?markerId=<id>` |
 | `units`       | `GET /api/units/:serial`, `GET /api/batches/:batchId/units`, `POST /api/batches/:batchId/units/:serial/qc`                                                                                                                                          |
 | `webhooks`    | `POST /webhooks/orders` (Shopify `orders/create` — HMAC-verified when `SHOPIFY_WEBHOOK_SECRET` is set; no session auth required)                                                                                                                    |
+| `events`      | `GET /api/events/stream` (auth required; `text/event-stream`; emits `transition` frames on batch/PVT state changes; `: ping` heartbeat every 25 s) |
 
 Errors are emitted by the central handler with stable shape:
 
@@ -204,6 +205,15 @@ Errors are emitted by the central handler with stable shape:
 | Variable                      | Purpose                                                                                                                       |
 | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `PVT_DEFAULT_VALIDITY_MONTHS` | How many months a validated PVT authorizes production (default `6`). Per-product override via `products.pvt_validity_months`. |
+
+**Iteration 3 — InvenTree raw-material sync** (required when pushing received lots to InvenTree):
+
+| Variable | Purpose |
+| --- | --- |
+| `INVENTREE_URL` | Base URL of your InvenTree instance (already used by iter-2 `inventree-client.ts`) |
+| `INVENTREE_API_TOKEN` | InvenTree API token (already used by iter-2 client) |
+| `INVENTREE_DEFAULT_LOCATION_ID` | Fallback stock location ID when the lot has no specific location (optional; omit to skip location assignment) |
+| `INVENTREE_PUSH_INTERVAL_MS` | How often the sync loop polls for unpushed lots (default `60000`). `NODE_ENV=test` disables network regardless. |
 
 ## Operational Runbooks
 

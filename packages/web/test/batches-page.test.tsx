@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { vi, describe, it, expect, beforeEach } from "vitest";
@@ -85,5 +86,65 @@ describe("BatchDetailPage action gating", () => {
 
     await screen.findByText("PB-2026-0001");
     expect(screen.queryByRole("button", { name: /stage|start|submit|complete|cancel/i })).toBeNull();
+  });
+});
+
+describe("BatchDetailPage mutation paths", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  it("clicking Stage calls POST to correct endpoint", async () => {
+    const receivedBatch: BatchDetail = { ...batchIn, status: "received_from_cutter", startedAt: null };
+    vi.spyOn(client, "get").mockResolvedValue(receivedBatch);
+    const postSpy = vi.spyOn(client, "post").mockResolvedValue(undefined);
+    renderDetail(receivedBatch);
+
+    await userEvent.click(await screen.findByRole("button", { name: /^stage/i }));
+
+    expect(postSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/api/batches/PB-2026-0001/stage"),
+    );
+  });
+
+  it("clicking Submit QC calls POST to correct endpoint", async () => {
+    vi.spyOn(client, "get").mockResolvedValue(batchIn);
+    const postSpy = vi.spyOn(client, "post").mockResolvedValue(undefined);
+    renderDetail(batchIn);
+
+    // Wait for detail to load, then find the Qty input by its label text
+    await screen.findByText("PB-2026-0001");
+    const qtyInput = screen.getAllByRole("textbox")[0]!;
+    await userEvent.type(qtyInput, "99");
+    await userEvent.click(screen.getByRole("button", { name: /submit.*qc/i }));
+
+    expect(postSpy).toHaveBeenCalledWith(
+      expect.stringContaining("/api/batches/PB-2026-0001/submit-qc"),
+      expect.anything(),
+    );
+  });
+});
+
+describe("BatchDetailPage action gating — all statuses", () => {
+  beforeEach(() => vi.restoreAllMocks());
+
+  const STATUS_CASES: Array<[BatchDetail["status"], RegExp | null]> = [
+    ["received_from_cutter", /^stage/i],
+    ["staged_pre_prod", /^start/i],
+    ["in_production", /submit.*qc/i],
+    ["awaiting_qc", /^complete/i],
+    ["completed", null],
+    ["cancelled", null],
+  ];
+
+  it.each(STATUS_CASES)("status=%s shows correct primary action", async (status, btnPattern) => {
+    const batch: BatchDetail = { ...batchIn, status, startedAt: status !== "received_from_cutter" && status !== "staged_pre_prod" ? "2026-06-02T00:00:00Z" : null };
+    vi.spyOn(client, "get").mockResolvedValue(batch);
+    renderDetail(batch);
+
+    await screen.findByText("PB-2026-0001");
+    if (btnPattern) {
+      expect(screen.getByRole("button", { name: btnPattern })).toBeTruthy();
+    } else {
+      expect(screen.queryByRole("button", { name: /stage|start|submit|complete|cancel/i })).toBeNull();
+    }
   });
 });

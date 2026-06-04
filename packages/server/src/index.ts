@@ -42,7 +42,11 @@ async function main(): Promise<void> {
     config.INVENTREE_PUSH_INTERVAL_MS,
     (r) => {
       if (r.scanned > 0) {
-        app.log.info(r, "inventree sync tick");
+        if (r.failed > 0) {
+          app.log.warn(r, "inventree sync tick — failures present");
+        } else {
+          app.log.info(r, "inventree sync tick");
+        }
       }
     },
   );

@@ -11,14 +11,14 @@ interface TransitionEvent {
 }
 
 /**
- * Opens a single EventSource to /api/events/stream once authenticated.
- * On each `transition` event, invalidates the relevant TanStack Query keys
- * so views refetch authoritative data. The stream is a SIGNAL — we never
- * mutate local state from it. Auto-reconnect is handled by the browser's
- * native EventSource implementation. The returned `close` function stops
- * the stream (call on logout).
+ * Opens a single EventSource to /api/events/stream for the lifetime of the
+ * component. On each `transition` event, invalidates the relevant TanStack
+ * Query keys so views refetch authoritative data.
+ * The stream is a SIGNAL — we never mutate local state from it.
+ * Auto-reconnect is handled by the browser's native EventSource implementation.
+ * Closed automatically when the calling component unmounts.
  */
-export function useEventStream(): { close: () => void } {
+export function useEventStream(): void {
   const qc = useQueryClient();
 
   useEffect(() => {
@@ -44,16 +44,8 @@ export function useEventStream(): { close: () => void } {
       }
     });
 
+    es.onerror = (e) => console.error("[sse] stream error:", e);
+
     return () => es.close();
   }, [qc]);
-
-  // Provide an explicit close for logout path (App.tsx calls it before clearing cache).
-  // The useEffect cleanup already handles unmount; this is a belt-and-suspenders for logout.
-  const close = () => {
-    // No-op in the hook — the effect cleanup handles it.
-    // The App component can simply call queryClient.clear() + navigate('/login')
-    // which unmounts App and triggers the cleanup. This export is kept for clarity.
-  };
-
-  return { close };
 }

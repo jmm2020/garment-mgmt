@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { eq } from "drizzle-orm";
 import { withTestDb } from "./helpers/test-db.js";
-import { syncPendingOnceLots } from "../src/jobs/inventree-sync.js";
+import { syncPendingOnceLots, startInventorySyncLoop } from "../src/jobs/inventree-sync.js";
 import type { InvenTreeClientConfig } from "../src/integrations/inventree-client.js";
 import { schema } from "@garment-mgmt/db";
 
@@ -69,6 +69,21 @@ describe("syncPendingOnceLots", () => {
       await syncPendingOnceLots(db, testModeCfg); // first run — pushes it
       const result = await syncPendingOnceLots(db, testModeCfg); // second run — skip
       expect(result.scanned).toBe(0); // already pushed, not selected
+    });
+  });
+});
+
+describe("startInventorySyncLoop", () => {
+  it("calls syncPendingOnceLots at least once and stops cleanly", async () => {
+    await withTestDb(async (db) => {
+      let ticks = 0;
+      const handle = startInventorySyncLoop(db, testModeCfg, 0, () => {
+        ticks++;
+      });
+      await new Promise<void>((res) => setTimeout(res, 20));
+      handle.stop();
+      await handle.promise;
+      expect(ticks).toBeGreaterThanOrEqual(1);
     });
   });
 });

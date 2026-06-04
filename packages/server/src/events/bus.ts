@@ -11,12 +11,15 @@ export interface TransitionEvent {
 
 class EventBus extends EventEmitter {}
 export const bus = new EventBus();
+// One listener per SSE client — no fixed cap needed.
+bus.setMaxListeners(0);
 
 /** Fire-and-forget emit. Never throws into the caller's transaction path. */
 export function emitTransition(event: TransitionEvent): void {
   try {
     bus.emit("transition", event);
-  } catch {
-    // Listener errors must not crash state transitions.
+  } catch (err) {
+    // Listener errors must not crash state transitions, but should be observable.
+    process.stderr.write(`[event-bus] listener threw on transition event: ${String(err)}\n`);
   }
 }

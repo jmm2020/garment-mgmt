@@ -124,8 +124,8 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   await app.register(registerWebhookRoutes, { prefix: "/webhooks/shopify" });
   await app.register(registerEventRoutes, { prefix: "/api/events" });
 
-  // Serve built SPA assets in production. Register after all /api + /auth routes
-  // so static files don't shadow API paths.
+  // Serve built SPA from packages/web/dist. Skipped in test env (routes use inject()).
+  // Register after all /api + /auth routes so static files don't shadow API paths.
   if (config.NODE_ENV !== "test") {
     try {
       await app.register(staticPlugin, {
@@ -149,9 +149,10 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
           error: { code: "not_found", message: "Not found" },
         });
       });
-    } catch {
+    } catch (err) {
       app.log.warn(
-        "web dist not found — static serving skipped (run pnpm --filter @garment-mgmt/web build first)",
+        { err },
+        "web dist not found or static plugin registration failed — SPA serving skipped",
       );
     }
   }

@@ -348,7 +348,7 @@ export async function cancelBatch(db: Database, input: CancelBatchInput): Promis
   if (!input.reason?.trim()) {
     throw new ValidationFailedError("cancel reason is required");
   }
-  let prevStatus: schema.ProductionBatchStatus = "received_from_cutter";
+  let prevStatus!: schema.ProductionBatchStatus; // assigned in tx before use
   const after = await db.transaction(async (tx) => {
     const before = await loadBatch(tx, input.ref);
     prevStatus = before.status;
