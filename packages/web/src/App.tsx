@@ -2,6 +2,7 @@ import { Link, Outlet, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { logout } from "./api/client.js";
 import { ApiError } from "./api/types.js";
+import { useEventStream } from "./hooks/useEventStream.js";
 
 const navLinkStyle: React.CSSProperties = {
   display: "inline-flex",
@@ -17,6 +18,10 @@ const navLinkStyle: React.CSSProperties = {
 export function App() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+
+  // Open SSE stream for the lifetime of this authenticated shell.
+  // Closes automatically when App unmounts (on logout or 401 redirect).
+  useEventStream();
 
   async function handleLogout() {
     try {
@@ -43,6 +48,9 @@ export function App() {
         <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
           <strong style={{ fontSize: "1.1rem" }}>Garment Mgmt</strong>
           <nav style={{ display: "flex" }}>
+            <Link to="/" style={navLinkStyle}>
+              Dashboard
+            </Link>
             <Link to="/batches" style={navLinkStyle}>
               Batches
             </Link>
