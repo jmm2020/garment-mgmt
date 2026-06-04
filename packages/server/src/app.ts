@@ -9,6 +9,7 @@ import { registerAuthRoutes } from "./routes/auth.js";
 import { registerBatchRoutes } from "./routes/batches.js";
 import { registerBomRoutes } from "./routes/boms.js";
 import { registerCutTicketRoutes } from "./routes/cut-tickets.js";
+import { registerEventRoutes } from "./routes/events.js";
 import { registerLotRoutes } from "./routes/lots.js";
 import { registerMaterialRoutes } from "./routes/materials.js";
 import { registerPoRoutes } from "./routes/pos.js";
@@ -114,6 +115,7 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   await app.register(registerUnitRoutes, { prefix: "/api/units" });
   await app.register(registerPvtRoutes, { prefix: "/api/pvt" });
   await app.register(registerWebhookRoutes, { prefix: "/webhooks/shopify" });
+  await app.register(registerEventRoutes, { prefix: "/api/events" });
 
   return app;
 }

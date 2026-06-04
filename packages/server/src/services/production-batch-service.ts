@@ -6,6 +6,7 @@ import {
   NotFoundError,
   ValidationFailedError,
 } from "../errors.js";
+import { emitTransition } from "../events/bus.js";
 import { recordAudit } from "./audit-service.js";
 import { loadBatch, writeEvent, type BatchRef } from "./production-batch-queries.js";
 import { mintUnits } from "./production-unit-service.js";
@@ -32,7 +33,7 @@ export async function receiveFromCutter(
   db: Database,
   input: ReceiveFromCutterInput,
 ): Promise<ProductionBatch> {
-  return db.transaction(async (tx) => {
+  const batch = await db.transaction(async (tx) => {
     const [ct] = await tx
       .select()
       .from(schema.cutTickets)
@@ -111,6 +112,15 @@ export async function receiveFromCutter(
 
     return batch;
   });
+  emitTransition({
+    kind: "batch",
+    id: batch.id,
+    ref: batch.batchNo,
+    fromStatus: null,
+    toStatus: "received_from_cutter",
+    at: new Date().toISOString(),
+  });
+  return batch;
 }
 
 export async function stageForProduction(
@@ -118,12 +128,21 @@ export async function stageForProduction(
   ref: BatchRef,
   actorUserId?: number,
 ): Promise<ProductionBatch> {
-  return transition(db, ref, {
+  const batch = await transition(db, ref, {
     from: "received_from_cutter",
     to: "staged_pre_prod",
     timestampColumn: "stagedAt",
     actorUserId,
   });
+  emitTransition({
+    kind: "batch",
+    id: batch.id,
+    ref: batch.batchNo,
+    fromStatus: "received_from_cutter",
+    toStatus: "staged_pre_prod",
+    at: new Date().toISOString(),
+  });
+  return batch;
 }
 
 export async function startProduction(
@@ -131,7 +150,7 @@ export async function startProduction(
   ref: BatchRef,
   actorUserId?: number,
 ): Promise<ProductionBatch> {
-  return db.transaction(async (tx) => {
+  const after = await db.transaction(async (tx) => {
     const before = await loadBatch(tx, ref);
     if (before.status !== "staged_pre_prod") {
       throw new BusinessRuleError(
@@ -172,6 +191,15 @@ export async function startProduction(
 
     return after;
   });
+  emitTransition({
+    kind: "batch",
+    id: after.id,
+    ref: after.batchNo,
+    fromStatus: "staged_pre_prod",
+    toStatus: "in_production",
+    at: new Date().toISOString(),
+  });
+  return after;
 }
 
 export interface SubmitForQcInput {
@@ -185,7 +213,7 @@ export async function submitForQc(db: Database, input: SubmitForQcInput): Promis
   if (!Number.isFinite(qty) || qty <= 0) {
     throw new ValidationFailedError("qty must be > 0");
   }
-  return db.transaction(async (tx) => {
+  const after = await db.transaction(async (tx) => {
     const before = await loadBatch(tx, input.ref);
     if (before.status !== "in_production") {
       throw new BusinessRuleError("invalid_transition", `Cannot submitForQc from ${before.status}`);
@@ -227,6 +255,15 @@ export async function submitForQc(db: Database, input: SubmitForQcInput): Promis
     });
     return after;
   });
+  emitTransition({
+    kind: "batch",
+    id: after.id,
+    ref: after.batchNo,
+    fromStatus: "in_production",
+    toStatus: "awaiting_qc",
+    at: new Date().toISOString(),
+  });
+  return after;
 }
 
 export interface CompleteBatchInput {
@@ -248,7 +285,7 @@ export async function completeBatch(
   if (!Number.isFinite(qty) || qty < 0) {
     throw new ValidationFailedError("qty must be >= 0");
   }
-  return db.transaction(async (tx) => {
+  const after = await db.transaction(async (tx) => {
     const before = await loadBatch(tx, input.ref);
     if (before.status !== "awaiting_qc") {
       throw new BusinessRuleError(
@@ -290,6 +327,15 @@ export async function completeBatch(
     });
     return after;
   });
+  emitTransition({
+    kind: "batch",
+    id: after.id,
+    ref: after.batchNo,
+    fromStatus: "awaiting_qc",
+    toStatus: "completed",
+    at: new Date().toISOString(),
+  });
+  return after;
 }
 
 export interface CancelBatchInput {
@@ -302,8 +348,10 @@ export async function cancelBatch(db: Database, input: CancelBatchInput): Promis
   if (!input.reason?.trim()) {
     throw new ValidationFailedError("cancel reason is required");
   }
-  return db.transaction(async (tx) => {
+  let prevStatus: schema.ProductionBatchStatus = "received_from_cutter";
+  const after = await db.transaction(async (tx) => {
     const before = await loadBatch(tx, input.ref);
+    prevStatus = before.status;
     if (before.status === "completed" || before.status === "cancelled") {
       throw new BusinessRuleError(
         "invalid_transition",
@@ -341,6 +389,15 @@ export async function cancelBatch(db: Database, input: CancelBatchInput): Promis
     });
     return after;
   });
+  emitTransition({
+    kind: "batch",
+    id: after.id,
+    ref: after.batchNo,
+    fromStatus: prevStatus,
+    toStatus: "cancelled",
+    at: new Date().toISOString(),
+  });
+  return after;
 }
 
 interface SimpleTransitionInput {
