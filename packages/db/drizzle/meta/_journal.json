@@ -50,6 +50,13 @@
       "when": 1780072278115,
       "tag": "0006_swift_night_thrasher",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780580354302,
+      "tag": "0007_sour_masque",
+      "breakpoints": true
     }
   ]
 }

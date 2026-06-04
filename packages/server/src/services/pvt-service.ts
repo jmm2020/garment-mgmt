@@ -6,6 +6,7 @@ import {
   NotFoundError,
   ValidationFailedError,
 } from "../errors.js";
+import { emitTransition } from "../events/bus.js";
 import { recordAudit } from "./audit-service.js";
 import { getPvtAuthorization, loadRun, type RunRef } from "./pvt-queries.js";
 
@@ -24,7 +25,7 @@ export interface CreatePvtRunInput {
 }
 
 export async function createPvtRun(db: Database, input: CreatePvtRunInput): Promise<Run> {
-  return db.transaction(async (tx) => {
+  const run = await db.transaction(async (tx) => {
     const [ct] = await tx
       .select()
       .from(schema.cutTickets)
@@ -62,6 +63,15 @@ export async function createPvtRun(db: Database, input: CreatePvtRunInput): Prom
     });
     return run;
   });
+  emitTransition({
+    kind: "pvt",
+    id: run.id,
+    ref: run.runNo,
+    fromStatus: null,
+    toStatus: "cutting",
+    at: new Date().toISOString(),
+  });
+  return run;
 }
 
 export async function markPvtShipped(
@@ -69,12 +79,21 @@ export async function markPvtShipped(
   ref: RunRef,
   actorUserId?: number,
 ): Promise<Run> {
-  return simpleTransition(db, ref, {
+  const run = await simpleTransition(db, ref, {
     from: "cutting",
     to: "shipped",
     timestampColumn: "shippedAt",
     actorUserId,
   });
+  emitTransition({
+    kind: "pvt",
+    id: run.id,
+    ref: run.runNo,
+    fromStatus: "cutting",
+    toStatus: "shipped",
+    at: new Date().toISOString(),
+  });
+  return run;
 }
 
 export async function markPvtReceived(
@@ -82,12 +101,21 @@ export async function markPvtReceived(
   ref: RunRef,
   actorUserId?: number,
 ): Promise<Run> {
-  return simpleTransition(db, ref, {
+  const run = await simpleTransition(db, ref, {
     from: "shipped",
     to: "inspecting",
     timestampColumn: "receivedAt",
     actorUserId,
   });
+  emitTransition({
+    kind: "pvt",
+    id: run.id,
+    ref: run.runNo,
+    fromStatus: "shipped",
+    toStatus: "inspecting",
+    at: new Date().toISOString(),
+  });
+  return run;
 }
 
 export interface ValidatePvtInput {
@@ -97,7 +125,7 @@ export interface ValidatePvtInput {
 }
 
 export async function validatePvt(db: Database, input: ValidatePvtInput): Promise<Run> {
-  return db.transaction(async (tx) => {
+  const after = await db.transaction(async (tx) => {
     const before = await loadRun(tx, input.ref);
     if (before.status !== "inspecting") {
       throw new BusinessRuleError(
@@ -135,6 +163,15 @@ export async function validatePvt(db: Database, input: ValidatePvtInput): Promis
     });
     return after;
   });
+  emitTransition({
+    kind: "pvt",
+    id: after.id,
+    ref: after.runNo,
+    fromStatus: "inspecting",
+    toStatus: "validated",
+    at: new Date().toISOString(),
+  });
+  return after;
 }
 
 export interface RejectPvtInput {
@@ -147,7 +184,7 @@ export async function rejectPvt(db: Database, input: RejectPvtInput): Promise<Ru
   if (!input.reason?.trim()) {
     throw new ValidationFailedError("reject reason is required");
   }
-  return db.transaction(async (tx) => {
+  const after = await db.transaction(async (tx) => {
     const before = await loadRun(tx, input.ref);
     if (before.status !== "inspecting") {
       throw new BusinessRuleError(
@@ -179,6 +216,15 @@ export async function rejectPvt(db: Database, input: RejectPvtInput): Promise<Ru
     });
     return after;
   });
+  emitTransition({
+    kind: "pvt",
+    id: after.id,
+    ref: after.runNo,
+    fromStatus: "inspecting",
+    toStatus: "rejected",
+    at: new Date().toISOString(),
+  });
+  return after;
 }
 
 export interface CancelPvtInput {
@@ -191,8 +237,10 @@ export async function cancelPvtRun(db: Database, input: CancelPvtInput): Promise
   if (!input.reason?.trim()) {
     throw new ValidationFailedError("cancel reason is required");
   }
-  return db.transaction(async (tx) => {
+  let prevStatus!: PvtStatus; // assigned in tx before use
+  const after = await db.transaction(async (tx) => {
     const before = await loadRun(tx, input.ref);
+    prevStatus = before.status;
     if (
       before.status === "validated" ||
       before.status === "rejected" ||
@@ -226,6 +274,15 @@ export async function cancelPvtRun(db: Database, input: CancelPvtInput): Promise
     });
     return after;
   });
+  emitTransition({
+    kind: "pvt",
+    id: after.id,
+    ref: after.runNo,
+    fromStatus: prevStatus,
+    toStatus: "cancelled",
+    at: new Date().toISOString(),
+  });
+  return after;
 }
 
 /**

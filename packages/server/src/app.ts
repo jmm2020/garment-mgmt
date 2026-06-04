@@ -1,5 +1,8 @@
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import cookie from "@fastify/cookie";
 import session from "@fastify/session";
+import staticPlugin from "@fastify/static";
 import { createDb, type Database } from "@garment-mgmt/db";
 import Fastify, { type FastifyInstance } from "fastify";
 import { ZodError } from "zod";
@@ -9,6 +12,7 @@ import { registerAuthRoutes } from "./routes/auth.js";
 import { registerBatchRoutes } from "./routes/batches.js";
 import { registerBomRoutes } from "./routes/boms.js";
 import { registerCutTicketRoutes } from "./routes/cut-tickets.js";
+import { registerEventRoutes } from "./routes/events.js";
 import { registerLotRoutes } from "./routes/lots.js";
 import { registerMaterialRoutes } from "./routes/materials.js";
 import { registerPoRoutes } from "./routes/pos.js";
@@ -30,6 +34,10 @@ declare module "@fastify/session" {
     userId?: number;
   }
 }
+
+// Resolve packages/web/dist relative to this server package
+const __dirname = fileURLToPath(new URL(".", import.meta.url));
+const webDistPath = join(__dirname, "../../web/dist");
 
 export interface AppOptions {
   db?: Database;
@@ -114,6 +122,40 @@ export async function buildApp(opts: AppOptions = {}): Promise<FastifyInstance> 
   await app.register(registerUnitRoutes, { prefix: "/api/units" });
   await app.register(registerPvtRoutes, { prefix: "/api/pvt" });
   await app.register(registerWebhookRoutes, { prefix: "/webhooks/shopify" });
+  await app.register(registerEventRoutes, { prefix: "/api/events" });
+
+  // Serve built SPA from packages/web/dist. Skipped in test env (routes use inject()).
+  // Register after all /api + /auth routes so static files don't shadow API paths.
+  if (config.NODE_ENV !== "test") {
+    try {
+      await app.register(staticPlugin, {
+        root: webDistPath,
+        prefix: "/",
+        decorateReply: false,
+      });
+
+      // SPA deep-link fallback: any GET that reaches here (not matched by an API route)
+      // gets index.html so React Router can handle it client-side.
+      app.setNotFoundHandler(async (req, reply) => {
+        if (
+          req.method === "GET" &&
+          !req.url.startsWith("/api") &&
+          !req.url.startsWith("/auth") &&
+          !req.url.startsWith("/webhooks")
+        ) {
+          return reply.sendFile("index.html", webDistPath);
+        }
+        return reply.status(404).send({
+          error: { code: "not_found", message: "Not found" },
+        });
+      });
+    } catch (err) {
+      app.log.warn(
+        { err },
+        "web dist not found or static plugin registration failed — SPA serving skipped",
+      );
+    }
+  }
 
   return app;
 }
