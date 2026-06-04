@@ -5,7 +5,11 @@ import { useEventStream } from "../src/hooks/useEventStream.js";
 
 class MockEventSource {
   static listeners: Record<string, EventListenerOrEventListenerObject[]> = {};
+  static lastInstance: MockEventSource | null = null;
   onerror: ((e: Event) => void) | null = null;
+  constructor() {
+    MockEventSource.lastInstance = this;
+  }
   addEventListener(type: string, fn: EventListenerOrEventListenerObject) {
     (MockEventSource.listeners[type] ??= []).push(fn);
   }
@@ -18,6 +22,7 @@ class MockEventSource {
   }
   static reset() {
     MockEventSource.listeners = {};
+    MockEventSource.lastInstance = null;
   }
 }
 
@@ -83,5 +88,39 @@ describe("useEventStream", () => {
       }),
     ).not.toThrow();
     expect(qc.invalidateQueries).not.toHaveBeenCalled();
+  });
+
+  it("returns isDisconnected=false initially and true after onerror fires", () => {
+    const { result } = renderHook(() => useEventStream(), { wrapper });
+
+    expect(result.current.isDisconnected).toBe(false);
+
+    act(() => {
+      MockEventSource.lastInstance?.onerror?.(new Event("error"));
+    });
+
+    expect(result.current.isDisconnected).toBe(true);
+  });
+
+  it("resets isDisconnected to false when a transition event arrives after an error", () => {
+    const { result } = renderHook(() => useEventStream(), { wrapper });
+
+    act(() => {
+      MockEventSource.lastInstance?.onerror?.(new Event("error"));
+    });
+    expect(result.current.isDisconnected).toBe(true);
+
+    act(() => {
+      MockEventSource.fire("transition", {
+        kind: "batch",
+        id: 1,
+        ref: "PB-2026-0001",
+        fromStatus: "staged_pre_prod",
+        toStatus: "in_production",
+        at: "2026-06-01T00:00:00Z",
+      });
+    });
+
+    expect(result.current.isDisconnected).toBe(false);
   });
 });

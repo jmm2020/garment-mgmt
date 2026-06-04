@@ -251,15 +251,14 @@ The `withTestDb(cb)` helper (`packages/server/test/helpers/test-db.ts`) wraps ea
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
 | **1**     | Data layer, services, REST API, CLI, lot provenance, cut-ticket flow (cut-only)                                                            | shipped — PR #1 (foundation)                |
 | **2**     | Production batches (PB-YYYY-####), per-unit tracking, PVT, structured SKUs, Shopify inventory push, sew-line capacity + machine assignment, React web shell (login + stubs) | shipped — PRs #2, #37 |
-| **3**     | Real-time push (WS/SSE), full sew/QC/finish/pack workflow screens                                                                          | future                                      |
-| **4+**    | CSV export, multi-facility, native mobile, SAM-based costing                                                                               | future                                      |
+| **3**     | React UI + SSE real-time (Dashboard, Batches, PVT, InvenTree sync)                                                                         | shipped — PRs #38–#45 (#47)                 |
+| **4**     | Sew-line UI, lots/cut-tickets/BOM/PO surfaces, CSV export, multi-facility                                                                  | future                                      |
 
-## Out of scope (iterations 3+)
+## Out of scope (iteration 4+)
 
-- **Iteration 3+**: Real-time push (WS/SSE) · full sew/QC/finish/pack workflow screens
-- **Iteration 4+**: CSV export · multi-facility · native mobile · SAM costing engine
+- **Iteration 4+**: Sew-line operator screens · lots/cut-tickets/BOM/PO UI · CSV export · multi-facility · native mobile · SAM costing engine
 
-Schema reserves the seams (`base_sam_minutes`, `fg_sku`, `file_ref`, `reorder_point`, `target_stock`) — implementations land in iterations 3+.
+Schema reserves the seams (`base_sam_minutes`, `fg_sku`, `file_ref`, `reorder_point`, `target_stock`) — implementations land in iteration 4.
 
 ## Working with Claude
 

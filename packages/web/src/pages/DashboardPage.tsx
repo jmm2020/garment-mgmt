@@ -61,6 +61,8 @@ export function DashboardPage() {
       <h2>Active Batches</h2>
       {batchesQ.isLoading && <p>Loading…</p>}
       {batchesQ.isError && <p style={{ color: "#b00020" }}>Failed to load batches.</p>}
+      {pvtQ.isLoading && <p>Loading PVT data…</p>}
+      {pvtQ.isError && <p style={{ color: "#b00020" }}>Failed to load PVT data.</p>}
       <table style={{ borderCollapse: "collapse", width: "100%" }}>
         <thead>
           <tr>

@@ -42,11 +42,28 @@ describe("DashboardPage", () => {
     mockGet(mockBatches, mockPvt);
     renderDashboard();
 
+    // Wait for counts to populate (data loads asynchronously).
     await screen.findByText("in_production");
-    // Wait for the batches query to resolve and counts to render.
-    // in_production count = 1 (and awaiting_qc count = 1) — at least one "1" cell present.
-    const ones = await screen.findAllByText("1");
-    expect(ones.length).toBeGreaterThanOrEqual(1);
+    // Find headers to determine column indices.
+    const inProdHeader = screen.getByRole("columnheader", { name: "in_production" });
+    const table = inProdHeader.closest("table")!;
+    const headers = Array.from(table.querySelectorAll("thead th"));
+    const inProdIndex = headers.indexOf(inProdHeader);
+    const awaitingQcHeader = screen.getByRole("columnheader", { name: "awaiting_qc" });
+    const awaitingQcIndex = headers.indexOf(awaitingQcHeader);
+
+    // Wait until counts > 0 are rendered (tbody is populated after query resolves).
+    // mockBatches has 1 in_production and 1 awaiting_qc.
+    const getCount = (colIndex: number) => {
+      const row = table.querySelector("tbody tr")!;
+      return row.querySelectorAll("td")[colIndex]?.textContent ?? "0";
+    };
+
+    // Retry until the in_production count cell shows "1".
+    await vi.waitFor(() => {
+      expect(getCount(inProdIndex)).toBe("1");
+    });
+    expect(getCount(awaitingQcIndex)).toBe("1");
   });
 
   it("shows expired PVT alert banner", async () => {

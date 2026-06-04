@@ -20,7 +20,7 @@ export function App() {
   const queryClient = useQueryClient();
 
   // Closed automatically when App unmounts (on logout or 401 redirect).
-  useEventStream();
+  const { isDisconnected } = useEventStream();
 
   async function handleLogout() {
     try {
@@ -66,6 +66,11 @@ export function App() {
           Log out
         </button>
       </header>
+      {isDisconnected && (
+        <div style={{ background: "#fff3cd", padding: "4px 16px", textAlign: "center", fontSize: "0.9rem" }}>
+          Real-time updates paused — reconnecting…
+        </div>
+      )}
       <main style={{ padding: "16px" }}>
         <Outlet />
       </main>
