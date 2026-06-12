@@ -67,7 +67,7 @@ export async function listBatches(
   }
   const where = conditions.length > 0 ? and(...conditions) : undefined;
   const [countRow] = await db
-    .select({ total: sql<number>`cast(count(*) as int)` })
+    .select({ total: sql<number>`coalesce(cast(count(*) as int), 0)` })
     .from(schema.productionBatches)
     .where(where);
   const items = await db
@@ -77,7 +77,8 @@ export async function listBatches(
     .orderBy(desc(schema.productionBatches.receivedAt))
     .limit(limit)
     .offset(offset);
-  return { items, total: countRow?.total ?? 0, limit, offset };
+  // COUNT(*) with coalesce always returns exactly one row
+  return { items, total: countRow!.total, limit, offset };
 }
 
 export async function markShopifyPushed(

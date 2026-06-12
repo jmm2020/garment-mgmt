@@ -6,6 +6,7 @@ import {
   type ProductionFixture,
 } from "./helpers/seed-production.js";
 import { listBatches } from "../src/services/production-batch-queries.js";
+import { ValidationFailedError } from "../src/errors.js";
 import { receiveFromCutter } from "../src/services/production-batch-service.js";
 
 afterAll(async () => {
@@ -80,6 +81,26 @@ describe("listBatches — pagination", () => {
       await seedBatches(db, fx, 3);
 
       const page = await listBatches(db, { status: "completed" });
+      expect(page.total).toBe(0);
+      expect(page.items).toEqual([]);
+    });
+  });
+
+  it("throws ValidationFailedError for a non-ISO since value", async () => {
+    await withTestDb(async (db) => {
+      await expect(listBatches(db, { since: "not-a-date" })).rejects.toBeInstanceOf(
+        ValidationFailedError,
+      );
+    });
+  });
+
+  it("since filter returns no results for a far-future date", async () => {
+    await withTestDb(async (db) => {
+      const fx = await seedProductionFixture(db);
+      await seedValidatedPvt(db, fx);
+      await seedBatches(db, fx, 2);
+
+      const page = await listBatches(db, { since: "2099-01-01T00:00:00Z" });
       expect(page.total).toBe(0);
       expect(page.items).toEqual([]);
     });

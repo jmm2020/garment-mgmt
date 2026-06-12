@@ -60,6 +60,14 @@ describe("BatchesPage", () => {
       expect.stringContaining("/api/batches?status=in_production"),
     );
   });
+
+  it('renders "Showing X of Y" using total from server, not items.length', async () => {
+    const truncatedPage: BatchListPage = { items: mockBatches, total: 100, limit: 50, offset: 0 };
+    vi.spyOn(client, "get").mockResolvedValue(truncatedPage);
+    renderBatches();
+
+    await screen.findByText(/Showing 2 of 100/);
+  });
 });
 
 function renderDetail(batch: BatchDetail) {
