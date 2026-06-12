@@ -48,6 +48,13 @@ export interface BatchSummary {
   cancelledAt: string | null;
 }
 
+export interface BatchListPage {
+  items: BatchSummary[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
 export interface ProductionEvent {
   id: number;
   batchId: number;

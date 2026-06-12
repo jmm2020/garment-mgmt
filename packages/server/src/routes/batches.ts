@@ -45,6 +45,8 @@ const listQuery = z.object({
   sku: z.string().optional(),
   since: z.string().optional(),
   cutterUserId: z.coerce.number().int().positive().optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  offset: z.coerce.number().int().min(0).optional(),
 });
 
 function parseRef(raw: string): BatchRef {

@@ -15,6 +15,8 @@ interface ListOpts {
   sku?: string;
   since?: string;
   cutter?: string;
+  limit?: string;
+  offset?: string;
 }
 
 interface SubmitQcOpts {
@@ -66,12 +68,16 @@ export function registerBatchCommand(program: Command): void {
     .option("--sku <sku>", "filter by canonical sku")
     .option("--since <iso>", "only batches received on/after this ISO timestamp")
     .option("--cutter <userId>", "filter by cutter user id")
+    .option("--limit <n>", "max results (1-200, default 50)")
+    .option("--offset <n>", "skip first n results (default 0)")
     .action(async (opts: ListOpts) => {
       const params = new URLSearchParams();
       if (opts.status) params.set("status", opts.status);
       if (opts.sku) params.set("sku", opts.sku);
       if (opts.since) params.set("since", opts.since);
       if (opts.cutter) params.set("cutterUserId", opts.cutter);
+      if (opts.limit !== undefined) params.set("limit", opts.limit);
+      if (opts.offset !== undefined) params.set("offset", opts.offset);
       const qs = params.toString();
       const data = await request("GET", `/api/batches${qs ? `?${qs}` : ""}`);
       printJson(data);

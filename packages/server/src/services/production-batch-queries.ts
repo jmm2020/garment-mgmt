@@ -1,5 +1,5 @@
 import { schema, type Database, type DbExecutor } from "@garment-mgmt/db";
-import { and, asc, desc, eq, gte, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, sql } from "drizzle-orm";
 import { NotFoundError, ValidationFailedError } from "../errors.js";
 
 type ProductionBatch = schema.ProductionBatch;
@@ -25,12 +25,23 @@ export interface ListBatchesFilter {
   sku?: string;
   since?: string;
   cutterUserId?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export interface BatchListPage {
+  items: ProductionBatch[];
+  total: number;
+  limit: number;
+  offset: number;
 }
 
 export async function listBatches(
   db: Database,
   filter: ListBatchesFilter = {},
-): Promise<ProductionBatch[]> {
+): Promise<BatchListPage> {
+  const limit = Math.min(filter.limit ?? 50, 200);
+  const offset = filter.offset ?? 0;
   const conditions = [] as ReturnType<typeof eq>[];
   if (filter.status) conditions.push(eq(schema.productionBatches.status, filter.status));
   if (filter.cutterUserId) {
@@ -46,7 +57,7 @@ export async function listBatches(
       .select({ id: schema.productVariants.id })
       .from(schema.productVariants)
       .where(eq(schema.productVariants.sku, filter.sku));
-    if (variantIds.length === 0) return [];
+    if (variantIds.length === 0) return { items: [], total: 0, limit, offset };
     conditions.push(
       inArray(
         schema.productionBatches.productVariantId,
@@ -55,11 +66,18 @@ export async function listBatches(
     );
   }
   const where = conditions.length > 0 ? and(...conditions) : undefined;
-  return db
+  const [countRow] = await db
+    .select({ total: sql<number>`cast(count(*) as int)` })
+    .from(schema.productionBatches)
+    .where(where);
+  const items = await db
     .select()
     .from(schema.productionBatches)
     .where(where)
-    .orderBy(desc(schema.productionBatches.receivedAt));
+    .orderBy(desc(schema.productionBatches.receivedAt))
+    .limit(limit)
+    .offset(offset);
+  return { items, total: countRow?.total ?? 0, limit, offset };
 }
 
 export async function markShopifyPushed(
