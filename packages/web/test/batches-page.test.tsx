@@ -6,7 +6,7 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 import { BatchesPage } from "../src/pages/BatchesPage.js";
 import { BatchDetailPage } from "../src/pages/BatchDetailPage.js";
 import * as client from "../src/api/client.js";
-import type { BatchSummary, BatchDetail } from "../src/api/types.js";
+import type { BatchSummary, BatchListPage, BatchDetail } from "../src/api/types.js";
 
 function renderBatches() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -24,11 +24,14 @@ const mockBatches: BatchSummary[] = [
   { id: 2, batchNo: "PB-2026-0002", status: "awaiting_qc", qtyPlanned: "50.000", qtyActual: "49.000", productVariantId: 2, cutterUserId: 1, receivedAt: "2026-06-02T00:00:00Z", completedAt: null, cancelledAt: null },
 ];
 
+const mockPage: BatchListPage = { items: mockBatches, total: mockBatches.length, limit: 50, offset: 0 };
+const emptyPage: BatchListPage = { items: [], total: 0, limit: 50, offset: 0 };
+
 describe("BatchesPage", () => {
   beforeEach(() => vi.restoreAllMocks());
 
   it("renders batch list with batchNo and status", async () => {
-    vi.spyOn(client, "get").mockResolvedValue(mockBatches);
+    vi.spyOn(client, "get").mockResolvedValue(mockPage);
     renderBatches();
 
     await screen.findByText("PB-2026-0001");
@@ -38,7 +41,7 @@ describe("BatchesPage", () => {
   });
 
   it("each row links to batch detail", async () => {
-    vi.spyOn(client, "get").mockResolvedValue(mockBatches);
+    vi.spyOn(client, "get").mockResolvedValue(mockPage);
     renderBatches();
 
     const link = await screen.findByRole("link", { name: /PB-2026-0001/i });
@@ -46,7 +49,7 @@ describe("BatchesPage", () => {
   });
 
   it("selecting a status filter calls get with status query param", async () => {
-    const getSpy = vi.spyOn(client, "get").mockResolvedValue([]);
+    const getSpy = vi.spyOn(client, "get").mockResolvedValue(emptyPage);
     renderBatches();
 
     await screen.findByRole("table");
@@ -56,6 +59,14 @@ describe("BatchesPage", () => {
     expect(getSpy).toHaveBeenCalledWith(
       expect.stringContaining("/api/batches?status=in_production"),
     );
+  });
+
+  it('renders "Showing X of Y" using total from server, not items.length', async () => {
+    const truncatedPage: BatchListPage = { items: mockBatches, total: 100, limit: 50, offset: 0 };
+    vi.spyOn(client, "get").mockResolvedValue(truncatedPage);
+    renderBatches();
+
+    await screen.findByText(/Showing 2 of 100/);
   });
 });
 

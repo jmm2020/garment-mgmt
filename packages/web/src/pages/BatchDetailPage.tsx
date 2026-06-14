@@ -43,7 +43,6 @@ export function BatchDetailPage() {
       if (type === "submit-qc") return post(`/api/batches/${ref}/submit-qc`, { qty: qtyInput });
       if (type === "complete") return post(`/api/batches/${ref}/complete`, { qty: qtyInput, verdict, note: noteInput || undefined });
       if (type === "cancel") return post(`/api/batches/${ref}/cancel`, { reason: cancelReason });
-      throw new Error(`[BatchDetailPage] unknown action type: ${String(type)}`);
     },
     onSuccess: invalidate,
     onError: (err: unknown) => {
@@ -74,20 +73,20 @@ export function BatchDetailPage() {
             </label>
           )}
           {legal.includes("complete") && (
-            <label style={{ display: "block", marginBottom: 8 }}>
-              Verdict:{" "}
-              <select value={verdict} onChange={(e) => setVerdict(e.target.value as typeof verdict)}>
-                <option value="pass">Pass</option>
-                <option value="fail">Fail</option>
-                <option value="pass_with_notes">Pass with notes</option>
-              </select>
-            </label>
-          )}
-          {legal.includes("complete") && (
-            <label style={{ display: "block", marginBottom: 8 }}>
-              Note (optional):{" "}
-              <input value={noteInput} onChange={(e) => setNoteInput(e.target.value)} style={{ width: 240 }} />
-            </label>
+            <>
+              <label style={{ display: "block", marginBottom: 8 }}>
+                Verdict:{" "}
+                <select value={verdict} onChange={(e) => setVerdict(e.target.value as typeof verdict)}>
+                  <option value="pass">Pass</option>
+                  <option value="fail">Fail</option>
+                  <option value="pass_with_notes">Pass with notes</option>
+                </select>
+              </label>
+              <label style={{ display: "block", marginBottom: 8 }}>
+                Note (optional):{" "}
+                <input value={noteInput} onChange={(e) => setNoteInput(e.target.value)} style={{ width: 240 }} />
+              </label>
+            </>
           )}
           {legal.includes("cancel") && (
             <label style={{ display: "block", marginBottom: 8 }}>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { get } from "../api/client.js";
-import type { BatchSummary, BatchStatus } from "../api/types.js";
+import type { BatchListPage, BatchStatus } from "../api/types.js";
 
 const STATUS_OPTIONS: BatchStatus[] = [
   "received_from_cutter",
@@ -27,9 +27,9 @@ export function BatchesPage() {
   const search = params.toString();
   const url = search ? `/api/batches?${search}` : "/api/batches";
 
-  const { data: batches, isLoading, isError } = useQuery({
+  const { data, isLoading, isError } = useQuery({
     queryKey: ["batches", statusFilter, skuFilter, sinceFilter, cutterFilter],
-    queryFn: () => get<BatchSummary[]>(url),
+    queryFn: () => get<BatchListPage>(url),
   });
 
   return (
@@ -83,6 +83,11 @@ export function BatchesPage() {
 
       {isLoading && <p>Loading…</p>}
       {isError && <p style={{ color: "#b00020" }}>Failed to load batches.</p>}
+      {data && (
+        <p style={{ marginBottom: 8 }}>
+          Showing {data.items.length} of {data.total}
+        </p>
+      )}
 
       <table style={{ borderCollapse: "collapse", width: "100%" }}>
         <thead>
@@ -93,7 +98,7 @@ export function BatchesPage() {
           </tr>
         </thead>
         <tbody>
-          {(batches ?? []).map((b) => (
+          {(data?.items ?? []).map((b) => (
             <tr key={b.id}>
               <td style={{ border: "1px solid #ccc", padding: "4px 12px" }}>
                 <Link to={`/batches/${b.batchNo}`}>{b.batchNo}</Link>
